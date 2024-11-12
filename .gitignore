@@ -1,0 +1,18 @@
+out
+dist
+node_modules
+.vscode-test/
+*.vsix
+logs
+**/**/.DS_Store
+
+# Build files for Coq
+**/*.glob
+**/*.vo
+**/*.vok
+**/*.vos
+**/*.aux
+
+# Ignore generated build files inside dataset
+dataset/**/result
+dataset/**/.vscode/
