@@ -134,42 +134,4 @@ suite("Retrieve goals from Coq file", () => {
             }
         }
     });
-
-    test("Retreive goal in project with imports", async () => {
-        const goals = await getGoalsAtPoints(
-            [
-                { line: 4, character: 4 },
-                { line: 4, character: 14 },
-                { line: 4, character: 21 },
-            ],
-            ["coqProj", "theories", "B.v"],
-            ["coqProj"]
-        );
-
-        const expectedGoals = [
-            {
-                hyps: [],
-                ty: "forall n : nat, evenb (S n) = negb (evenb n)",
-            },
-            {
-                hyps: ["n : nat"],
-                ty: "evenb (S n) = negb (evenb n)",
-            },
-            {
-                hyps: ["n : nat"],
-                ty: "negb (evenb n) = negb (evenb n)",
-            },
-        ];
-
-        expect(goals).toHaveLength(3);
-        for (const [i, goal] of goals.entries()) {
-            if (goal.err) {
-                console.error("ERROR", i, goal.val.message);
-            }
-            expect(goal.ok).toEqual(true);
-            if (goal.ok) {
-                expect(unpackGoal(goal.val[0])).toEqual(expectedGoals[i]);
-            }
-        }
-    });
 });

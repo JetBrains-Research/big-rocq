@@ -20,7 +20,7 @@ npm install
 
 Run the entry point:
 ```bash
-npm run serve
+npm run here
 ```
 
 Run tests:

@@ -65,17 +65,4 @@ export class EventLogger {
             }
         });
     }
-
-    subscribeToLogicEvent(
-        event: string,
-        callback: (data?: any) => void
-    ): SubscriptionId {
-        return this.subscribe(event, Severity.LOGIC, (_message, data) =>
-            callback(data)
-        );
-    }
-
-    logLogicEvent(event: string, data?: any) {
-        this.log(event, "", data, Severity.LOGIC);
-    }
 }

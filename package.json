@@ -24,7 +24,7 @@
     "pretest": "npm run compile && npm run lint",
     "test": "npm run test-only",
     "clean": "rm -rf out",
-    "here": "node ./out/mainNode.js",
+    "here": "node ./out/utilityRunner.js",
     "prehere": "npm run pretest",
     "rebuild-test-resources": "cd ./src/test/resources/coqProj && make clean && make",
     "preclean-test": "npm run clean && npm run rebuild-test-resources && npm run compile && npm run lint",

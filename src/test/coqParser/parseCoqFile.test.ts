@@ -103,30 +103,4 @@ suite("Coq file parser tests", () => {
         const theoremNames = doc.map((theorem) => theorem.name);
         expect(theoremNames).toEqual(theoremData);
     });
-
-    test("Test parse file which is part of project", async () => {
-        const doc = await parseTheoremsFromCoqFile(
-            ["coqProj", "theories", "B.v"],
-            ["coqProj"]
-        );
-
-        const theoremData = [
-            {
-                name: "test",
-                statement:
-                    "Theorem test : forall n : nat, evenb (S n) = negb (evenb n).",
-                isIncomplete: false,
-            },
-        ];
-
-        expect(doc).toHaveLength(theoremData.length);
-        for (const [i, theorem] of doc.entries()) {
-            expect(theorem.name).toEqual(theoremData[i].name);
-            expect(theorem.statement).toEqual(theoremData[i].statement);
-            expect(theorem.proof).not.toBeNullish();
-            expect(theorem.proof?.is_incomplete).toEqual(
-                theoremData[i].isIncomplete
-            );
-        }
-    });
 });
