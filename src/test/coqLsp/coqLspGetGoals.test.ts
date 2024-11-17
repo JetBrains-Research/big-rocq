@@ -2,7 +2,7 @@ import { expect } from "earl";
 import { Result } from "ts-results";
 
 import { createTestCoqLspClient } from "../../coqLsp/coqLspBuilders";
-import { Goal, PpString } from "../../coqLsp/coqLspTypes";
+import { Goal, GoalConfig, PpString } from "../../coqLsp/coqLspTypes";
 
 import { Uri } from "../../utils/uri";
 import { resolveResourcesDir } from "../commonTestFunctions/pathsResolver";
@@ -12,7 +12,7 @@ suite("Retrieve goals from Coq file", () => {
         points: { line: number; character: number }[],
         resourcePath: string[],
         projectRootPath?: string[]
-    ): Promise<Result<Goal<PpString>[], Error>[]> {
+    ): Promise<Result<GoalConfig<PpString>, Error>[]> {
         const [filePath, rootDir] = resolveResourcesDir(
             resourcePath,
             projectRootPath
@@ -52,8 +52,8 @@ suite("Retrieve goals from Coq file", () => {
         expect(goals).toHaveLength(1);
         expect(goals[0].ok).toEqual(true);
         if (goals[0].ok) {
-            expect(goals[0].val).toHaveLength(1);
-            expect(unpackGoal(goals[0].val[0])).toEqual(expectedGoal);
+            expect(goals[0].val.goals).toHaveLength(1);
+            expect(unpackGoal(goals[0].val.goals[0])).toEqual(expectedGoal);
         }
     });
 
@@ -96,7 +96,7 @@ suite("Retrieve goals from Coq file", () => {
         for (const [i, goal] of goals.entries()) {
             expect(goal).not.toBeA(Error);
             if (goal.ok) {
-                expect(unpackGoal(goal.val[0])).toEqual(expectedGoals[i]);
+                expect(unpackGoal(goal.val.goals[0])).toEqual(expectedGoals[i]);
             }
         }
     });
@@ -130,7 +130,7 @@ suite("Retrieve goals from Coq file", () => {
         for (const goal of goals) {
             expect(goal.ok).toEqual(true);
             if (goal.ok) {
-                expect(goal.val).toBeEmpty();
+                expect(goal.val.goals).toBeEmpty();
             }
         }
     });

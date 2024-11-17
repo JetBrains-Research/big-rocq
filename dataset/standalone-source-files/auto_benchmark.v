@@ -13,10 +13,11 @@ Theorem test2nat1 : forall n : nat, n = 0 \/ n <> 0.
 Proof.
   intros n.
   destruct n.
-  - admit.
-  - right.
+  { { left.
+    reflexivity. } }
+  right.
   discriminate.
-Admitted.
+Qed.
 
 Theorem test2nat2 : forall n : nat, n = 0 \/ n <> 0.
 Proof.

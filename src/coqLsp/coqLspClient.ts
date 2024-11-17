@@ -32,6 +32,7 @@ import {
     FlecheDocumentParams,
     Goal,
     GoalAnswer,
+    GoalConfig,
     GoalRequest,
     PpString,
 } from "./coqLspTypes";
@@ -52,7 +53,7 @@ export interface CoqLspClient extends Disposable {
         documentUri: Uri,
         version: number,
         command?: string
-    ): Promise<Result<Goal<PpString>[], Error>>;
+    ): Promise<Result<GoalConfig<PpString>, Error>>;
 
     /**
      * Returns a FlecheDocument for the given uri.
@@ -64,12 +65,6 @@ export interface CoqLspClient extends Disposable {
     openTextDocument(uri: Uri, version?: number): Promise<DiagnosticMessage>;
 
     closeTextDocument(uri: Uri): Promise<void>;
-
-    /**
-     *
-     * @param goals
-     */
-    getFirstGoalOrThrow(goals: Result<Goal<PpString>[], Error>): Goal<PpString>;
 }
 
 const goalReqType = new RequestType<GoalRequest, GoalAnswer<PpString>, void>(
@@ -123,7 +118,7 @@ export class CoqLspClientImpl implements CoqLspClient {
         documentUri: Uri,
         version: number,
         command?: string
-    ): Promise<Result<Goal<PpString>[], Error>> {
+    ): Promise<Result<GoalConfig<PpString>, Error>> {
         return await this.mutex.runExclusive(async () => {
             throwOnAbort(this.abortController?.signal);
             return this.getGoalsAtPointUnsafe(
@@ -221,7 +216,7 @@ export class CoqLspClientImpl implements CoqLspClient {
         documentUri: Uri,
         version: number,
         command?: string
-    ): Promise<Result<Goal<PpString>[], Error>> {
+    ): Promise<Result<GoalConfig<PpString>, Error>> {
         let goalRequestParams: GoalRequest = {
             textDocument: VersionedTextDocumentIdentifier.create(
                 documentUri.uri,
@@ -238,7 +233,7 @@ export class CoqLspClientImpl implements CoqLspClient {
                 goalReqType,
                 goalRequestParams
             );
-            const goals = goalAnswer?.goals?.goals;
+            const goals = goalAnswer?.goals;
 
             if (!goals) {
                 return Err(CoqLspError.unknownError());

@@ -1,5 +1,4 @@
 import { readFileSync } from "fs";
-import { Result } from "ts-results";
 import { Position, Range } from "vscode-languageclient";
 
 import { CoqLspClient } from "../coqLsp/coqLspClient";
@@ -109,20 +108,21 @@ async function parseFlecheDocument(
                 } else {
                     // TODO: Cover with tests, might be a source of bugs if somewhere
                     // absense of initialGoal is not handled properly or invariants are broken
-                    let initialGoal: Result<Goal<PpString>[], Error> | null =
-                        null;
+                    let initialGoal: Goal<PpString>[] | null = null;
                     if (extractTheoremInitialGoal) {
-                        initialGoal = await client.getGoalsAtPoint(
+                        const goalConfig = await client.getGoalsAtPoint(
                             doc.spans[i + 1].range.start,
                             uri,
                             1
                         );
 
-                        if (initialGoal.err) {
+                        if (goalConfig.err) {
                             throw new CoqParsingError(
                                 `unable to get initial goal for theorem: ${thrName}`
                             );
                         }
+
+                        initialGoal = goalConfig.val.goals;
                     }
 
                     const proof = parseProof(i + 1, doc.spans, textLines);
@@ -132,7 +132,7 @@ async function parseFlecheDocument(
                             doc.spans[i].range,
                             thrStatement,
                             proof,
-                            initialGoal?.val[0]
+                            initialGoal?.at(0)
                         )
                     );
                 }

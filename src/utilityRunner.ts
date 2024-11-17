@@ -20,6 +20,8 @@ async function main() {
             extensionDevelopmentPath,
             extensionTestsPath,
             extensionTestsEnv: envVals,
+            // For offline testing
+            version: "1.95.3",
         });
     } catch (err) {
         console.error("Failed to run the utility", err);

@@ -2,6 +2,7 @@ import { createCoqLspClient } from "../coqLsp/coqLspBuilders";
 import { CoqLspClient } from "../coqLsp/coqLspClient";
 
 import { parseCoqFile } from "../coqParser/parseCoqFile";
+import { buildCoqProofTree } from "../coqProofTree/buildCoqProofTree";
 import { EventLogger } from "../logging/eventLogger";
 import Logger from "../logging/logger";
 import { Uri } from "../utils/uri";
@@ -67,9 +68,8 @@ export class ProjectProcessor {
                 .join(", ")}`
         );
 
-        const firstTheorem = parsedTheorems[0];
-        
-        
+        const firstTheorem = parsedTheorems[2];
+        await buildCoqProofTree(firstTheorem, this.coqLspClient, fileUri, 1);
 
         await this.coqLspClient.closeTextDocument(fileUri);
     }

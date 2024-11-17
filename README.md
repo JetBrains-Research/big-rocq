@@ -4,6 +4,9 @@
 
 This utility takes a Coq project as input and uses some domain knowladge to increase a number of theorems in the dataset by a significant factor. It produces new theorems from existing ones. 
 
+## TODO
+- We can also try augmenting the dataset by adding zero progress tactics or doing some equivalent rewrites 
+
 ## Prerequisites
 
 Setup the npm version via `nvm`:
