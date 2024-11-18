@@ -45,9 +45,11 @@ export function ppHypothesis(hyp: Hyp<PpString>, ppMode: PpMode): string {
 }
 
 export function ppGoal(goal: Goal<PpString>, ppMode: PpMode): string {
-    const hyps = goal.hyps.map(hyp => ppHypothesis(hyp, ppMode)).join("\n");
-    const type = colorizeText(goal.ty as string, ppMode, "red");
-    return `${hyps}\n${styleText(type, ppMode, "bold")}\n`;
+    const delimiter = ppMode === "console" ? '\n' : '<br>';
+    const hyps = goal.hyps.map(hyp => ppHypothesis(hyp, ppMode)).join(delimiter);
+    const conclusion = colorizeText(goal.ty as string, ppMode, "red");
+    const middleBreak = hyps.length === 0 ? '' : delimiter;
+    return `${hyps}${middleBreak}${styleText(conclusion, ppMode, "bold")}\n`;
 }
 
 export function printGoalStack(stack: [Goal<PpString>[], Goal<PpString>[]][], ppMode: PpMode) {

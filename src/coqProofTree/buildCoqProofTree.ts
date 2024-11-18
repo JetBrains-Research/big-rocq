@@ -173,8 +173,8 @@ export async function buildCoqProofTree(
 
             console.log("---------------------------------------------\n");
         }
-
-        const treeVisualizer = new TreeVisualizer(proofTreeRoot);
-        treeVisualizer.drawToFile('tree.html');
     }
+
+    const treeVisualizer = new TreeVisualizer(proofTreeRoot);
+    treeVisualizer.drawToFile('tree.html');
 }
