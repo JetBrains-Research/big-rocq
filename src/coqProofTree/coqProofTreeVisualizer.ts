@@ -31,7 +31,6 @@ export class TreeVisualizer {
     <title>Coq Proof Tree</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        .node circle { fill: #69b3a2; }
         .node foreignObject { overflow: visible; }
         .link { fill: none; stroke: black; }
         .edgelabel { 
@@ -102,7 +101,8 @@ export class TreeVisualizer {
             .attr("transform", d => \`translate(\${d.y},\${d.x})\`);
 
         node.append("circle")
-            .attr("r", 10);
+            .attr("r", 10)
+            .attr("fill", d => d.children ? "#69b3a2" : "#ff6961");
 
         const tooltip = d3.select("#tooltip");
 

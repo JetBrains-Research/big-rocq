@@ -40,7 +40,7 @@ export class CoqProofTreeNode {
 
     private addChild(
         appliedProofStep: CoqProofTreeEdgeType,
-        proofState: CoqProofTreeNodeType
+        proofState?: CoqProofTreeNodeType
     ): CoqProofTreeNode {
         return new CoqProofTreeNode([this, appliedProofStep], proofState);
     }
@@ -49,8 +49,12 @@ export class CoqProofTreeNode {
         appliedProofStep: ProofStep,
         proofState: GoalConfig<PpString>
     ): CoqProofTreeNode[] {
-        const newSubgoals: CoqProofTreeNode[] = [];
+        if (proofState.goals.length === 0) {
+            const emptyState = this.addChild(appliedProofStep);
+            return [emptyState];
+        }
 
+        const newSubgoals: CoqProofTreeNode[] = [];
         for (const goal of proofState.goals) {
             const newChild = this.addChild(appliedProofStep, goal);
             newSubgoals.push(newChild);
