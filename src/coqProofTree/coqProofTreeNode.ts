@@ -63,7 +63,7 @@ export class CoqProofTreeNode {
         return newSubgoals;
     }
 
-    // TODO: Refactor dublicating bfs
+    // TODO: Refactor dublicating dfs
     subtreeFind(
         predicate: (node: CoqProofTreeNode) => boolean
     ): CoqProofTreeNode | undefined {
@@ -79,7 +79,7 @@ export class CoqProofTreeNode {
 
             elem.children.forEach((child, _) => {
                 const [childNode, _edge] = child;
-                queue.push(childNode);
+                queue.unshift(childNode);
             });
         }
 
@@ -98,7 +98,7 @@ export class CoqProofTreeNode {
 
             elem.children.forEach((child, _) => {
                 const [childNode, _edge] = child;
-                queue.push(childNode);
+                queue.unshift(childNode);
             });
         }
 

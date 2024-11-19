@@ -34,12 +34,12 @@ export class CoqProofTree {
         return firstUnsolvedGoal.addChildren(appliedProofStep, proofState);
     }
 
-    bfs(): CoqProofTreeNode[] {
+    dfs(): CoqProofTreeNode[] {
         return this.root.collectSubtree();
     }
 
     filter(predicate: (value: CoqProofTreeNode) => boolean) {
-        const treeItems = this.bfs();
+        const treeItems = this.dfs();
         return treeItems.filter(predicate);
     }
 

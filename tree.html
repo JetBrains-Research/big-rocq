@@ -1,29 +1,4 @@
-import * as fs from 'fs';
-import { CoqProofTreeNode } from './coqProofTreeNode';
-import { ppGoal } from './proofStatePrinters';
 
-export class TreeVisualizer {
-    constructor(private treeRoot: CoqProofTreeNode) {}
-
-    private serializeNode(treeNode: CoqProofTreeNode, edgeLabel: string = ''): any {
-        return {
-            name: treeNode.proofState ? ppGoal(treeNode.proofState, 'html') : 'Empty',
-            edgeLabel: edgeLabel,
-            children: treeNode.children.map(([childNode, edge]) =>
-                this.serializeNode(childNode, edge.text)
-            )
-        };
-    }
-
-    public drawToFile(filePath: string) {
-        const serializedRoot = this.serializeNode(this.treeRoot);
-        const htmlContent = this.generateHTMLContent(serializedRoot);
-        fs.writeFileSync(filePath, htmlContent);
-        console.log(`Tree visualization saved to ${filePath}`);
-    }
-
-    private generateHTMLContent(treeData: any): string {
-        return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -55,7 +30,52 @@ export class TreeVisualizer {
     <svg width="1000" height="600"></svg>
     <div id="tooltip" class="tooltip" style="opacity:0;"></div>
     <script>
-        const data = ${JSON.stringify(treeData, null, 2)};
+        const data = {
+  "name": "<b><span style=\"color: red;\">forall n : nat, n = 0 \\/ n <> 0</span></b>\n",
+  "edgeLabel": "",
+  "children": [
+    {
+      "name": "<span style=\"color: goldenrod;\">n</span> : <span style=\"color: blue;\">nat</span><br><b><span style=\"color: red;\">n = 0 \\/ n <> 0</span></b>\n",
+      "edgeLabel": "intros n.",
+      "children": [
+        {
+          "name": "<b><span style=\"color: red;\">0 = 0 \\/ 0 <> 0</span></b>\n",
+          "edgeLabel": "destruct n.",
+          "children": [
+            {
+              "name": "<span style=\"color: goldenrod;\">n</span> : <span style=\"color: blue;\">nat</span><br><b><span style=\"color: red;\">S n <> 0</span></b>\n",
+              "edgeLabel": "right.",
+              "children": [
+                {
+                  "name": "Empty",
+                  "edgeLabel": "discriminate.",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "<span style=\"color: goldenrod;\">n</span> : <span style=\"color: blue;\">nat</span><br><b><span style=\"color: red;\">S n = 0 \\/ S n <> 0</span></b>\n",
+          "edgeLabel": "destruct n.",
+          "children": [
+            {
+              "name": "<b><span style=\"color: red;\">0 = 0</span></b>\n",
+              "edgeLabel": "left.",
+              "children": [
+                {
+                  "name": "Empty",
+                  "edgeLabel": "reflexivity.",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+};
 
         const width = 1000;
         const height = 600;
@@ -98,7 +118,7 @@ export class TreeVisualizer {
             .enter()
             .append("g")
             .attr("class", "node")
-            .attr("transform", d => \`translate(\${d.y},\${d.x})\`);
+            .attr("transform", d => `translate(${d.y},${d.x})`);
 
         node.append("circle")
             .attr("r", 10)
@@ -116,6 +136,4 @@ export class TreeVisualizer {
         });
     </script>
 </body>
-</html>`;
-    }
-}
+</html>
