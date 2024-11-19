@@ -152,8 +152,6 @@ export async function buildCoqProofTree(
         }
 
         if (step.vernac_type === Vernacexpr.VernacExtend) {
-            console.log(`Tactic being applied: ${step.text}\n`)
-
             let goalAfterStep = await getStateAfterTactic(
                 step,
                 lspClient,

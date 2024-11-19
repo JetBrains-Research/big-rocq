@@ -21,7 +21,6 @@ export class CoqProofTree {
         appliedProofStep: ProofStep,
         proofState: GoalConfig<PpString>
     ): CoqProofTreeNode[] {
-        console.log(`applyToFirstUnsolvedGoal ${appliedProofStep.text}`);
         const firstUnsolvedGoal = this.root.subtreeFind((node) => {
             return node.isUnsolvedGoal;
         });

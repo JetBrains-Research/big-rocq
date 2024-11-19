@@ -63,45 +63,60 @@ export class CoqProofTreeNode {
         return newSubgoals;
     }
 
-    // TODO: Refactor dublicating dfs
-    subtreeFind(
-        predicate: (node: CoqProofTreeNode) => boolean
+    dfsTraverse(
+        callback: (node: CoqProofTreeNode) => void,
+        shouldTerminate: (node: CoqProofTreeNode) => boolean = () => false
     ): CoqProofTreeNode | undefined {
         let queue: CoqProofTreeNode[] = [];
         queue.push(this);
-
+    
         while (queue.length !== 0) {
             const elemNullable = queue.shift();
             const elem = unwrapOrThrow(elemNullable);
-            if (predicate(elem)) {
+    
+            callback(elem);
+    
+            if (shouldTerminate(elem)) {
                 return elem;
             }
 
-            elem.children.forEach((child, _) => {
-                const [childNode, _edge] = child;
-                queue.unshift(childNode);
+            // We want to traverse children in the same order as
+            // they are stored in the children array (actually the 
+            // order od goals). Therefore the array is reversed before 
+            // push fronting
+            const children = elem.children.map(([child, _]) => child);
+            children.reverse().forEach((child) => {
+                queue.unshift(child);
             });
         }
-
+    
         return undefined;
+    }
+    
+    subtreeFind(
+        predicate: (node: CoqProofTreeNode) => boolean
+    ): CoqProofTreeNode | undefined {
+        return this.dfsTraverse(
+            () => {},
+            predicate
+        );
+    }
+
+    subtreeFilter(
+        predicate: (node: CoqProofTreeNode) => boolean
+    ): CoqProofTreeNode[] {
+        const nodes: CoqProofTreeNode[] = [];
+        this.dfsTraverse((node) => {
+            if (predicate(node)) {
+                nodes.push(node);
+            }
+        });
+        return nodes;
     }
 
     collectSubtree(): CoqProofTreeNode[] {
-        let nodes: CoqProofTreeNode[] = [];
-        let queue: CoqProofTreeNode[] = [];
-        queue.push(this);
-
-        while (queue.length !== 0) {
-            const elemNullable = queue.shift();
-            const elem = unwrapOrThrow(elemNullable);
-            nodes.push(elem);
-
-            elem.children.forEach((child, _) => {
-                const [childNode, _edge] = child;
-                queue.unshift(childNode);
-            });
-        }
-
+        const nodes: CoqProofTreeNode[] = [];
+        this.dfsTraverse((node) => nodes.push(node));
         return nodes;
     }
 
