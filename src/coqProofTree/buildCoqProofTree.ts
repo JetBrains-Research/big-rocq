@@ -14,8 +14,11 @@ import { Uri } from "../utils/uri";
 
 import { CoqProofTree } from "./coqProofTree";
 import { CoqProofTreeNode } from "./coqProofTreeNode";
-import { printGoals } from "./proofStatePrinters";
 import { TreeVisualizer } from "./coqProofTreeVisualizer";
+import {
+    constructTheoremWithProof,
+    theoremDatasetSampleToString,
+} from "./proofBuilder";
 
 export class CoqProofTreeBuildingError extends Error {
     constructor(message: string) {
@@ -160,19 +163,16 @@ export async function buildCoqProofTree(
             );
 
             proofTree.applyToFirstUnsolvedGoal(step, goalAfterStep);
-
-            const unsolvedNodes = proofTree.getStack();
-            const unsolvedGoals = unsolvedNodes.map(node => node.proofState);
-            
-            unsolvedGoals.forEach(goalNullable => {
-                const goal = unwrapOrThrow(goalNullable);
-                printGoals([goal], "console");
-            })
-
-            console.log("---------------------------------------------\n");
         }
     }
 
     const treeVisualizer = new TreeVisualizer(proofTreeRoot);
-    treeVisualizer.drawToFile('tree.html');
+    treeVisualizer.drawToFile("tree.html");
+
+    const newSample = constructTheoremWithProof(
+        proofTreeRoot.proofState!,
+        proofTreeRoot.collectSubtreeEdges()
+    );
+
+    console.log(theoremDatasetSampleToString(newSample));
 }

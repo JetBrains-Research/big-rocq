@@ -5,6 +5,10 @@ import { unwrapOrThrow } from "../utils/optionWrappers";
 
 export type CoqProofTreeNodeType = Goal<PpString>;
 export type CoqProofTreeEdgeType = ProofStep;
+export type CoqProofTreeConnectionType = [
+    CoqProofTreeNode,
+    CoqProofTreeEdgeType,
+];
 
 /**
  * Invariant on children array: indices correspond to the order of
@@ -13,18 +17,18 @@ export type CoqProofTreeEdgeType = ProofStep;
 // TODO: Use base class
 export class CoqProofTreeNode {
     // Is undefined when it is a root
-    parent: CoqProofTreeNode | undefined;
+    parent: CoqProofTreeConnectionType | undefined;
 
     // Is undefined when there are no more goals
     proofState: CoqProofTreeNodeType | undefined;
-    children: [CoqProofTreeNode, CoqProofTreeEdgeType][] = [];
+    children: CoqProofTreeConnectionType[] = [];
 
     static createRoot(proofState?: CoqProofTreeNodeType): CoqProofTreeNode {
         return new CoqProofTreeNode(undefined, proofState);
     }
 
     protected constructor(
-        parent?: [CoqProofTreeNode, CoqProofTreeEdgeType],
+        parent?: CoqProofTreeConnectionType,
         proofState?: CoqProofTreeNodeType
     ) {
         this.proofState = proofState;
@@ -33,9 +37,9 @@ export class CoqProofTreeNode {
             return;
         }
 
+        this.parent = parent;
         const [parentNode, stepLabel] = parent;
-        this.parent = parentNode;
-        this.parent.children.push([this, stepLabel]);
+        parentNode.children.push([this, stepLabel]);
     }
 
     private addChild(
@@ -69,37 +73,34 @@ export class CoqProofTreeNode {
     ): CoqProofTreeNode | undefined {
         let queue: CoqProofTreeNode[] = [];
         queue.push(this);
-    
+
         while (queue.length !== 0) {
             const elemNullable = queue.shift();
             const elem = unwrapOrThrow(elemNullable);
-    
+
             callback(elem);
-    
+
             if (shouldTerminate(elem)) {
                 return elem;
             }
 
             // We want to traverse children in the same order as
-            // they are stored in the children array (actually the 
-            // order od goals). Therefore the array is reversed before 
+            // they are stored in the children array (actually the
+            // order od goals). Therefore the array is reversed before
             // push fronting
             const children = elem.children.map(([child, _]) => child);
             children.reverse().forEach((child) => {
                 queue.unshift(child);
             });
         }
-    
+
         return undefined;
     }
-    
+
     subtreeFind(
         predicate: (node: CoqProofTreeNode) => boolean
     ): CoqProofTreeNode | undefined {
-        return this.dfsTraverse(
-            () => {},
-            predicate
-        );
+        return this.dfsTraverse(() => {}, predicate);
     }
 
     subtreeFilter(
@@ -118,6 +119,25 @@ export class CoqProofTreeNode {
         const nodes: CoqProofTreeNode[] = [];
         this.dfsTraverse((node) => nodes.push(node));
         return nodes;
+    }
+
+    collectSubtreeEdges(): CoqProofTreeEdgeType[] {
+        if (this.isLeaf) {
+            return [];
+        }
+
+        if (this.children.length === 1) {
+            const child = unwrapOrThrow(this.children.at(0));
+            const [childNode, edge] = child;
+            return [edge].concat(childNode.collectSubtreeEdges());
+        } else {
+            const firstChild = unwrapOrThrow(this.children.at(0));
+            const [_, firstEdge] = firstChild;
+            const childrenEdges = this.children.map(([childNode, _]) =>
+                childNode.collectSubtreeEdges()
+            );
+            return [firstEdge].concat(childrenEdges.flat());
+        }
     }
 
     get firstChild(): CoqProofTreeNode | undefined {

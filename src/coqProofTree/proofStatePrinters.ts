@@ -1,6 +1,13 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { Goal, GoalConfig, Hyp, PpString } from "../coqLsp/coqLspTypes";
-import { colorize, LogColor, LogWeight, print, style } from "../logging/colorLogging";
+
+import {
+    LogColor,
+    LogWeight,
+    colorize,
+    print,
+    style,
+} from "../logging/colorLogging";
 
 type PpMode = "console" | "html";
 
@@ -18,21 +25,33 @@ function colorizeText(text: string, ppMode: PpMode, color?: LogColor): string {
         return colorize(text, color);
     } else {
         switch (color) {
-            case "red": return htmlColors.red(text);
-            case "green": return htmlColors.green(text);
-            case "yellow": return htmlColors.yellow(text);
-            case "blue": return htmlColors.blue(text);
-            case "cyan": return htmlColors.cyan(text);
-            default: return text;
+            case "red":
+                return htmlColors.red(text);
+            case "green":
+                return htmlColors.green(text);
+            case "yellow":
+                return htmlColors.yellow(text);
+            case "blue":
+                return htmlColors.blue(text);
+            case "cyan":
+                return htmlColors.cyan(text);
+            default:
+                return text;
         }
     }
 }
 
-function styleText(text: string, ppMode: PpMode, styleType?: LogWeight): string {
+function styleText(
+    text: string,
+    ppMode: PpMode,
+    styleType?: LogWeight
+): string {
     if (ppMode === "console") {
         return style(text, styleType);
     } else {
-        if (styleType === "bold") return htmlColors.bold(text);
+        if (styleType === "bold") {
+            return htmlColors.bold(text);
+        }
         return text;
     }
 }
@@ -40,19 +59,26 @@ function styleText(text: string, ppMode: PpMode, styleType?: LogWeight): string 
 export function ppHypothesis(hyp: Hyp<PpString>, ppMode: PpMode): string {
     const names = colorizeText(hyp.names.join(", "), ppMode, "yellow");
     const type = colorizeText(hyp.ty as string, ppMode, "blue");
-    const def = hyp.def ? ` := ${colorizeText(hyp.def as string, ppMode, "green")}` : "";
+    const def = hyp.def
+        ? ` := ${colorizeText(hyp.def as string, ppMode, "green")}`
+        : "";
     return `${names}${def} : ${type}`;
 }
 
 export function ppGoal(goal: Goal<PpString>, ppMode: PpMode): string {
-    const delimiter = ppMode === "console" ? '\n' : '<br>';
-    const hyps = goal.hyps.map(hyp => ppHypothesis(hyp, ppMode)).join(delimiter);
+    const delimiter = ppMode === "console" ? "\n" : "<br>";
+    const hyps = goal.hyps
+        .map((hyp) => ppHypothesis(hyp, ppMode))
+        .join(delimiter);
     const conclusion = colorizeText(goal.ty as string, ppMode, "red");
-    const middleBreak = hyps.length === 0 ? '' : delimiter;
+    const middleBreak = hyps.length === 0 ? "" : delimiter;
     return `${hyps}${middleBreak}${styleText(conclusion, ppMode, "bold")}\n`;
 }
 
-export function printGoalStack(stack: [Goal<PpString>[], Goal<PpString>[]][], ppMode: PpMode) {
+export function printGoalStack(
+    stack: [Goal<PpString>[], Goal<PpString>[]][],
+    ppMode: PpMode
+) {
     const stackDepth = stack.length;
     let currentDepth = 0;
 
@@ -61,10 +87,17 @@ export function printGoalStack(stack: [Goal<PpString>[], Goal<PpString>[]][], pp
         const goals = l.concat(r);
 
         if (goals.length > 0) {
-            let levelIndicator = currentDepth === 0
-                ? "the same bullet level"
-                : `the -${currentDepth} bullet level`;
-            print(colorizeText(`Remaining goals at ${levelIndicator}`, ppMode, "cyan"));
+            let levelIndicator =
+                currentDepth === 0
+                    ? "the same bullet level"
+                    : `the -${currentDepth} bullet level`;
+            print(
+                colorizeText(
+                    `Remaining goals at ${levelIndicator}`,
+                    ppMode,
+                    "cyan"
+                )
+            );
 
             goals.forEach((goal, index) => {
                 print(styleText(`Goal (${index + 1})`, ppMode, "bold"));
@@ -84,7 +117,10 @@ export function printGoals(goals: Goal<PpString>[], ppMode: PpMode) {
     });
 }
 
-export function printProofState(proofState: GoalConfig<PpString>, ppMode: PpMode) {
+export function printProofState(
+    proofState: GoalConfig<PpString>,
+    ppMode: PpMode
+) {
     const { goals, stack } = proofState;
     printGoals(goals, ppMode);
     printGoalStack(stack, ppMode);

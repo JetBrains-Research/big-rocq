@@ -1,17 +1,23 @@
-import * as fs from 'fs';
-import { CoqProofTreeNode } from './coqProofTreeNode';
-import { ppGoal } from './proofStatePrinters';
+import * as fs from "fs";
+
+import { CoqProofTreeNode } from "./coqProofTreeNode";
+import { ppGoal } from "./proofStatePrinters";
 
 export class TreeVisualizer {
     constructor(private treeRoot: CoqProofTreeNode) {}
 
-    private serializeNode(treeNode: CoqProofTreeNode, edgeLabel: string = ''): any {
+    private serializeNode(
+        treeNode: CoqProofTreeNode,
+        edgeLabel: string = ""
+    ): any {
         return {
-            name: treeNode.proofState ? ppGoal(treeNode.proofState, 'html') : 'Empty',
+            name: treeNode.proofState
+                ? ppGoal(treeNode.proofState, "html")
+                : "Empty",
             edgeLabel: edgeLabel,
             children: treeNode.children.map(([childNode, edge]) =>
                 this.serializeNode(childNode, edge.text)
-            )
+            ),
         };
     }
 
