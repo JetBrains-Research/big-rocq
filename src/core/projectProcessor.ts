@@ -40,10 +40,6 @@ export class ProjectProcessor {
         );
     }
 
-    // async run(filePath: string): Promise<void> {
-    //     await this.processFile(filePath);
-    // }
-
     async processFile(filePath: string): Promise<void> {
         this.eventLogger.log(
             "started-processing-file",
@@ -69,7 +65,7 @@ export class ProjectProcessor {
         );
 
         const firstTheorem = parsedTheorems[2];
-        await buildCoqProofTree(firstTheorem, this.coqLspClient, fileUri, 1);
+        await buildCoqProofTree(firstTheorem, this.coqLspClient, fileUri, 1, parsedTheorems);
 
         await this.coqLspClient.closeTextDocument(fileUri);
     }

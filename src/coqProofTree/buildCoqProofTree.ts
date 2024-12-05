@@ -15,10 +15,6 @@ import { Uri } from "../utils/uri";
 import { CoqProofTree } from "./coqProofTree";
 import { CoqProofTreeNode } from "./coqProofTreeNode";
 import { TreeVisualizer } from "./coqProofTreeVisualizer";
-import {
-    constructTheoremWithProof,
-    theoremDatasetSampleToString,
-} from "./proofBuilder";
 
 export class CoqProofTreeBuildingError extends Error {
     constructor(message: string) {
@@ -130,7 +126,8 @@ export async function buildCoqProofTree(
     theorem: Theorem,
     lspClient: CoqLspClient,
     docUri: Uri,
-    docVersion: number
+    docVersion: number,
+    existingTheoremsContext: Theorem[]
 ): Promise<void> {
     throwIfCannotProcess(theorem);
 
@@ -166,13 +163,6 @@ export async function buildCoqProofTree(
         }
     }
 
-    const treeVisualizer = new TreeVisualizer(proofTreeRoot);
+    const treeVisualizer = new TreeVisualizer(proofTreeRoot, theorem.name, existingTheoremsContext);
     treeVisualizer.drawToFile("tree.html");
-
-    const newSample = constructTheoremWithProof(
-        proofTreeRoot.proofState!,
-        proofTreeRoot.collectSubtreeEdges()
-    );
-
-    console.log(theoremDatasetSampleToString(newSample));
 }
