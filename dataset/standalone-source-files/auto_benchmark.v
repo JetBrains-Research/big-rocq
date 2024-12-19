@@ -1,13 +1,13 @@
 Theorem test : forall (A : Type) (P : A -> Prop) (x : A), P x -> P x.
 Proof.
-    admit.
-Admitted.
+    auto.
+Qed.
 
 Theorem test2 : forall (A : Type) (P : A -> Prop) (x : A), P x -> P x.
 Proof.
     intros A P x H.
-    admit.
-Admitted.
+    auto.
+Qed.
 
 Theorem test2nat1 : forall n : nat, n = 0 \/ n <> 0.
 Proof.
@@ -24,23 +24,23 @@ Proof.
     intros n.
     destruct n.
     {
-        admit.
+        auto.
     }
     {
-        admit.
+        auto.
     }
-Admitted.
+Qed.
 
 Theorem test_thr : forall n:nat, 0 + n = n.
 Proof.
     intros n. Print plus.
-    admit.
+    auto.
     (* reflexivity. *)
-Admitted.
+Qed.
 
 Lemma test_thr1 : forall n:nat, 0 + n + 0 = n.
 Proof.
     intros n. Print plus.
-    admit.
+    auto.
     (* reflexivity. *)
-Admitted.
+Qed.

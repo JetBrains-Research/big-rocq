@@ -1,14 +1,12 @@
 import { Goal, Hyp, PpString } from "../coqLsp/coqLspTypes";
 
-import { ProofStep, Theorem } from "../coqParser/parsedTypes";
+import { TheoremDatasetSample } from "../coqDatasetRepresentation/coqDatasetModels";
+import { ProofStep } from "../coqParser/parsedTypes";
 
-export interface TheoremDatasetSample {
-    theoremStatement: string;
-    proof: string;
-}
+import { CoqProofTree } from "./coqProofTree";
 
 export function theoremDatasetSampleToString(
-    sample: TheoremDatasetSample,
+    sample: TheoremDatasetSample
 ): string {
     return `${sample.theoremStatement}\nProof.\n${sample.proof}\nQed.`;
 }
@@ -18,30 +16,63 @@ function hypToString(hyp: Hyp<PpString>): string {
 }
 
 function goalToTheoremStatement(
-    proofGoal: Goal<PpString>, 
-    currentTheoremName: string, 
-    existingTheorems: string[],
+    proofGoal: Goal<PpString>,
+    currentTheoremName: string,
+    predefinedIndex?: number
 ): string {
     const auxTheoremConcl = proofGoal?.ty;
     const theoremIndeces = proofGoal?.hyps
         .map((hyp) => `(${hypToString(hyp)})`)
         .join(" ");
 
-    let name = existingTheorems.includes(currentTheoremName) ? `${currentTheoremName}_helper` : currentTheoremName;
-    const random = Math.floor(Math.random() * 1000);
-    name = existingTheorems.includes(name) ? `${name}_${random}` : name;
+    let name = `${currentTheoremName}_helper`;
+    if (predefinedIndex) {
+        name = `${name}_${predefinedIndex}`;
+    } else {
+        const random = Math.floor(Math.random() * 1000);
+        name = `${name}_${random}`;
+    }
 
-    return `Lemma ${name} ${theoremIndeces} :\n   ${auxTheoremConcl}.`;
+    return `Theorem ${name} ${theoremIndeces} :\n   ${auxTheoremConcl}.`;
 }
 
 export function constructTheoremWithProof(
     proofState: Goal<PpString>,
     proofSteps: ProofStep[],
     currentTheoremName: string,
-    existingTheorems: Theorem[]
+    predefinedIndex?: number
 ): TheoremDatasetSample {
-    const theoremNames = existingTheorems.map((theorem) => theorem.name);
-    const theoremStatement = goalToTheoremStatement(proofState, currentTheoremName, theoremNames);
+    const theoremStatement = goalToTheoremStatement(
+        proofState,
+        currentTheoremName,
+        predefinedIndex
+    );
     const proof = proofSteps.map((step) => step.text).join("\n");
     return { theoremStatement, proof };
+}
+
+export function augmentTreeToSamples(
+    coqProofTree: CoqProofTree,
+    currentTheoremName: string,
+    distinctNames: boolean = true
+): TheoremDatasetSample[] {
+    const nodes = coqProofTree.dfs();
+
+    const samples: TheoremDatasetSample[] = [];
+    let index = 0;
+    for (const node of nodes) {
+        if (node.proofState) {
+            const sample = constructTheoremWithProof(
+                node.proofState,
+                node.collectSubtreeEdges(),
+                currentTheoremName,
+                distinctNames ? index : undefined
+            );
+            samples.push(sample);
+
+            index += 1;
+        }
+    }
+
+    return samples;
 }

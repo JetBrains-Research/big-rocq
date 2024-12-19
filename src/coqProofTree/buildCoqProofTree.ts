@@ -1,3 +1,4 @@
+import { Err, Ok, Result } from "ts-results";
 import { Position } from "vscode-languageclient";
 
 import { CoqLspClient } from "../coqLsp/coqLspClient";
@@ -14,7 +15,6 @@ import { Uri } from "../utils/uri";
 
 import { CoqProofTree } from "./coqProofTree";
 import { CoqProofTreeNode } from "./coqProofTreeNode";
-import { TreeVisualizer } from "./coqProofTreeVisualizer";
 
 export class CoqProofTreeBuildingError extends Error {
     constructor(message: string) {
@@ -126,10 +126,15 @@ export async function buildCoqProofTree(
     theorem: Theorem,
     lspClient: CoqLspClient,
     docUri: Uri,
-    docVersion: number,
-    existingTheoremsContext: Theorem[]
-): Promise<void> {
-    throwIfCannotProcess(theorem);
+    docVersion: number
+): Promise<Result<CoqProofTree, CoqProofTreeBuildingError>> {
+    try {
+        throwIfCannotProcess(theorem);
+    } catch (e) {
+        if (e instanceof CoqProofTreeBuildingError) {
+            return Err(e);
+        }
+    }
 
     const proof = theorem.proof;
     const initialGoals = await getProofInitialState(
@@ -163,6 +168,5 @@ export async function buildCoqProofTree(
         }
     }
 
-    const treeVisualizer = new TreeVisualizer(proofTreeRoot, theorem.name, existingTheoremsContext);
-    treeVisualizer.drawToFile("tree.html");
+    return Ok(proofTree);
 }

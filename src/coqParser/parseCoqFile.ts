@@ -28,6 +28,7 @@ export async function parseCoqFile(
     extractTheoremInitialGoal: boolean = true,
     eventLogger?: EventLogger
 ): Promise<Theorem[]> {
+    // TODO: Add invariant that no error diags are present in the parsed file
     return client
         .getFlecheDocument(uri)
         .then((doc) => {

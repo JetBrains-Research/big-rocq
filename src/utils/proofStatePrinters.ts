@@ -9,7 +9,7 @@ import {
     style,
 } from "../logging/colorLogging";
 
-type PpMode = "console" | "html";
+export type PpMode = "coloredized-text" | "html" | "plain";
 
 const htmlColors = {
     bold: (text: string) => `<b>${text}</b>`,
@@ -21,23 +21,26 @@ const htmlColors = {
 };
 
 function colorizeText(text: string, ppMode: PpMode, color?: LogColor): string {
-    if (ppMode === "console") {
-        return colorize(text, color);
-    } else {
-        switch (color) {
-            case "red":
-                return htmlColors.red(text);
-            case "green":
-                return htmlColors.green(text);
-            case "yellow":
-                return htmlColors.yellow(text);
-            case "blue":
-                return htmlColors.blue(text);
-            case "cyan":
-                return htmlColors.cyan(text);
-            default:
-                return text;
-        }
+    switch (ppMode) {
+        case "plain":
+            return text;
+        case "coloredized-text":
+            return colorize(text, color);
+        case "html":
+            switch (color) {
+                case "red":
+                    return htmlColors.red(text);
+                case "green":
+                    return htmlColors.green(text);
+                case "yellow":
+                    return htmlColors.yellow(text);
+                case "blue":
+                    return htmlColors.blue(text);
+                case "cyan":
+                    return htmlColors.cyan(text);
+                default:
+                    return text;
+            }
     }
 }
 
@@ -46,13 +49,16 @@ function styleText(
     ppMode: PpMode,
     styleType?: LogWeight
 ): string {
-    if (ppMode === "console") {
-        return style(text, styleType);
-    } else {
-        if (styleType === "bold") {
-            return htmlColors.bold(text);
-        }
-        return text;
+    switch (ppMode) {
+        case "plain":
+            return text;
+        case "coloredized-text":
+            return style(text, styleType);
+        case "html":
+            if (styleType === "bold") {
+                return htmlColors.bold(text);
+            }
+            return text;
     }
 }
 
@@ -66,7 +72,7 @@ export function ppHypothesis(hyp: Hyp<PpString>, ppMode: PpMode): string {
 }
 
 export function ppGoal(goal: Goal<PpString>, ppMode: PpMode): string {
-    const delimiter = ppMode === "console" ? "\n" : "<br>";
+    const delimiter = ppMode === "html" ? "<br>" : "\n";
     const hyps = goal.hyps
         .map((hyp) => ppHypothesis(hyp, ppMode))
         .join(delimiter);

@@ -44,6 +44,6 @@ async function createAbstractCoqLspClient(
         coqLspClientConfig,
         logOutputChannel,
         eventLogger,
-        abortController
+        abortController?.signal
     );
 }
