@@ -4,6 +4,7 @@ import { TheoremDatasetSample } from "../coqDatasetRepresentation/coqDatasetMode
 import { ProofStep } from "../coqParser/parsedTypes";
 
 import { CoqProofTree } from "./coqProofTree";
+import * as assert from "assert";
 
 export function theoremDatasetSampleToString(
     sample: TheoremDatasetSample
@@ -18,21 +19,14 @@ function hypToString(hyp: Hyp<PpString>): string {
 function goalToTheoremStatement(
     proofGoal: Goal<PpString>,
     currentTheoremName: string,
-    predefinedIndex?: number
+    predefinedIndex: number
 ): string {
     const auxTheoremConcl = proofGoal?.ty;
     const theoremIndeces = proofGoal?.hyps
         .map((hyp) => `(${hypToString(hyp)})`)
         .join(" ");
 
-    let name = `${currentTheoremName}_helper`;
-    if (predefinedIndex) {
-        name = `${name}_${predefinedIndex}`;
-    } else {
-        const random = Math.floor(Math.random() * 1000);
-        name = `${name}_${random}`;
-    }
-
+    let name = `${currentTheoremName}_helper_${predefinedIndex}`;
     return `Theorem ${name} ${theoremIndeces} :\n   ${auxTheoremConcl}.`;
 }
 
@@ -40,7 +34,7 @@ export function constructTheoremWithProof(
     proofState: Goal<PpString>,
     proofSteps: ProofStep[],
     currentTheoremName: string,
-    predefinedIndex?: number
+    predefinedIndex: number
 ): TheoremDatasetSample {
     const theoremStatement = goalToTheoremStatement(
         proofState,
@@ -54,23 +48,22 @@ export function constructTheoremWithProof(
 export function augmentTreeToSamples(
     coqProofTree: CoqProofTree,
     currentTheoremName: string,
-    distinctNames: boolean = true
-): TheoremDatasetSample[] {
+): Map<number, TheoremDatasetSample> {
     const nodes = coqProofTree.dfs();
 
-    const samples: TheoremDatasetSample[] = [];
-    let index = 0;
+    const samples: Map<number, TheoremDatasetSample> = new Map();
     for (const node of nodes) {
         if (node.proofState) {
+            assert(!node.isLeaf);
             const sample = constructTheoremWithProof(
                 node.proofState,
                 node.collectSubtreeEdges(),
                 currentTheoremName,
-                distinctNames ? index : undefined
+                node.index
             );
-            samples.push(sample);
-
-            index += 1;
+            samples.set(node.index, sample);
+        } else {
+            assert(node.isLeaf);
         }
     }
 

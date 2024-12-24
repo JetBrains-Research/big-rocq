@@ -5,11 +5,17 @@ import { Position } from "vscode-languageclient";
 
 import { createCoqLspClient } from "../coqLsp/coqLspBuilders";
 import { CoqLspClient, DocumentSpec } from "../coqLsp/coqLspClient";
+
 import {
     CoqAugmentedTheoremItem,
     CoqDataset,
     CoqDatasetAugmentedFile,
+    NodeAugmentationResult,
 } from "../coqDatasetRepresentation/coqDatasetModels";
+import {
+    generateFileViewer,
+    generateFolderViewer,
+} from "../coqDatasetRepresentation/generateDatasetViewer";
 import { parseCoqFile } from "../coqParser/parseCoqFile";
 import { buildCoqProofTree } from "../coqProofTree/buildCoqProofTree";
 import { CoqTheoremValidator } from "../coqProofTree/coqTheoremValidator";
@@ -19,7 +25,6 @@ import Logger from "../logging/logger";
 import { Uri } from "../utils/uri";
 
 import { defaultUtilityRunParams } from "./utilityRunParams";
-import { generateFileViewer, generateFolderViewer } from "../coqDatasetRepresentation/generateDatasetViewer";
 
 export class ProjectProcessor {
     private collectedDataset: CoqDataset = [];
@@ -33,7 +38,7 @@ export class ProjectProcessor {
         public readonly logger: Logger,
         public readonly abortController: AbortController,
         private readonly coqLspClient: CoqLspClient
-    ) {}
+    ) { }
 
     static async create(): Promise<ProjectProcessor> {
         const eventLogger: EventLogger = new EventLogger();
@@ -44,6 +49,7 @@ export class ProjectProcessor {
         const abortController = new AbortController();
 
         const coqLspClient = await createCoqLspClient(
+            defaultUtilityRunParams.workspaceRootPath,
             defaultUtilityRunParams.coqLspServerPath,
             undefined,
             eventLogger,
@@ -58,10 +64,11 @@ export class ProjectProcessor {
         );
     }
 
-    async processProject(
-        path: string
-    ) {
-        await this.processDir(path, path);
+    async processProject() {
+        await this.processDir(
+            defaultUtilityRunParams.targetRootPath,
+            defaultUtilityRunParams.targetRootPath
+        );
     }
 
     private async processDir(
@@ -71,7 +78,11 @@ export class ProjectProcessor {
         coqLspTimeoutMillis: number = 150000
     ) {
         try {
-            const dirItems = readdirSync(accumulatedPath, { withFileTypes: true, recursive: false });
+            const dirItemsAll = readdirSync(accumulatedPath, {
+                withFileTypes: true,
+                recursive: false,
+            });
+            const dirItems = dirItemsAll.filter((item) => item.isDirectory() || item.isFile() && item.name.endsWith(".v"));
 
             if (generateDatasetViewer) {
                 generateFolderViewer(rootPath, accumulatedPath, dirItems);
@@ -96,7 +107,7 @@ export class ProjectProcessor {
                     this.collectedDataset.push(datasetItem);
                 }
             }
-        } catch(e) {
+        } catch (e) {
             this.eventLogger.log(
                 "error-processing-file",
                 `Error reading folder ${rootPath}: ${e}`
@@ -164,7 +175,9 @@ export class ProjectProcessor {
                     coqDatasetFileItem.augmentedTheorems.push({
                         parsedTheorem: theorem,
                         sourceFile: filePath,
-                        theoremAugmentationRes: Err(new Error(proofTree.val.message)),
+                        proofTreeBuildResult: Err(
+                            new Error(proofTree.val.message)
+                        ),
                     });
                 } else {
                     const samples = augmentTreeToSamples(
@@ -181,7 +194,7 @@ export class ProjectProcessor {
                         fileLines,
                         theoremStartPos
                     );
-                    const validationRes =
+                    const validationResults =
                         await theoremValidator.validateTheorems(
                             parentDir,
                             contentPrefix,
@@ -190,42 +203,37 @@ export class ProjectProcessor {
                             coqLspTimeoutMillis
                         );
 
-                    if (!validationRes.every((res) => res.isValid)) {
+                    const nodeAugmentationRes = new Map<number, NodeAugmentationResult>();
+                    samples.forEach((sample, nodeId) => {
+                        const validationRes = validationResults.get(nodeId);
+                        if (validationRes === undefined) {
+                            throw new Error(`No validation result for node ${nodeId}`);
+                        }
+
+                        nodeAugmentationRes.set(nodeId, validationRes.isValid ? Ok(sample) : Err(new Error(validationRes.diagnostic)));
+                    });
+
+                    nodeAugmentationRes.forEach((res, nodeId) => {
                         this.eventLogger.log(
-                            "error-processing-theorem",
-                            `Error processing theorem ${theorem.name}: ${validationRes
-                                .filter((res) => !res.isValid)
-                                .map((res) => res.diagnostic)
-                                .join(", ")}`
+                            "node-augmentation-result",
+                            `Node ${nodeId} augmentation result: ${res}`
                         );
+                    });
 
-                        coqDatasetFileItem.augmentedTheorems.push({
-                            parsedTheorem: theorem,
-                            sourceFile: filePath,
-                            theoremAugmentationRes: Err(
-                                new Error(
-                                    validationRes
-                                        .map((res) => res.diagnostic)
-                                        .join(", ")
-                                )
-                            ),
-                        });
-                    } else {
-                        const coqAugmentedTheorem: CoqAugmentedTheoremItem = {
-                            samples: samples,
-                            proofTree: proofTree.val,
-                        };
+                    const coqAugmentedTheorem: CoqAugmentedTheoremItem = {
+                        samples: nodeAugmentationRes,
+                        proofTree: proofTree.val,
+                    };
 
-                        coqDatasetFileItem.augmentedTheorems.push({
-                            parsedTheorem: theorem,
-                            sourceFile: filePath,
-                            theoremAugmentationRes: Ok(coqAugmentedTheorem),
-                        });
-                    }
+                    coqDatasetFileItem.augmentedTheorems.push({
+                        parsedTheorem: theorem,
+                        sourceFile: filePath,
+                        proofTreeBuildResult: Ok(coqAugmentedTheorem),
+                    });
                 }
             }
-        })
-        
+        });
+
         if (createDatasetViewer) {
             generateFileViewer(rootPath, coqDatasetFileItem);
         }

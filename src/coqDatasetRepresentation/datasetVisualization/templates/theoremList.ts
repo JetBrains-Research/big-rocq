@@ -2,6 +2,7 @@ import { Result } from "ts-results";
 
 export interface TheoremList {
     thr_name: string;
+    successfullyAugmentedNodesRatio?: [number, number];
     file_path: Result<string, Error>;
 }
 
@@ -115,6 +116,11 @@ export const theoremListViewHtml = (theoremList: TheoremList[]) => `
             transform: scale(1.02);
             box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
         }
+        .stats {
+            margin-right: 10px;
+            font-size: 0.9em;
+            color: #777;
+        }
     </style>
 </head>
 <body>
@@ -123,20 +129,24 @@ export const theoremListViewHtml = (theoremList: TheoremList[]) => `
         <h1>Theorem List</h1>
         <ul>
             ${theoremList
-                .map(({ thr_name, file_path }) => {
+                .map(({ thr_name, file_path, successfullyAugmentedNodesRatio }) => {
                     const isSuccess = file_path.ok;
                     const linkOrMessage = isSuccess
                         ? `<a href="${file_path.val}" target="_self">View Theorem</a>`
                         : `<span class="tooltip error">Unable to augment theorem
-                              <span class="tooltip-text">${file_path.val.message}</span>
-                          </span>`;
+                            <span class="tooltip-text">${file_path.val.message}</span>
+                        </span>`;
+                    const stats = successfullyAugmentedNodesRatio 
+                        ? `<span class="stats">(${successfullyAugmentedNodesRatio[0]} / ${successfullyAugmentedNodesRatio[1]} nodes augmented)</span>`
+                        : '';
                     return `
-                        <li class="${isSuccess ? 'success' : 'error'}">
+                        <li class="${isSuccess ? "success" : "error"}">
                             <span class="thr-name">${thr_name}</span>
+                            ${isSuccess ? stats : ''}
                             ${linkOrMessage}
                         </li>`;
                 })
-                .join("")}
+            .join("")}
         </ul>
     </div>
 </body>

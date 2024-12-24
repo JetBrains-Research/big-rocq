@@ -6,13 +6,14 @@ import { CoqLspClient, CoqLspClientImpl } from "./coqLspClient";
 import { CoqLspClientConfig, CoqLspConfig } from "./coqLspConfig";
 
 export async function createCoqLspClient(
+    workspaceRootPath: string,
     coqLspServerPath: string,
     logOutputChannel?: OutputChannel,
     eventLogger?: EventLogger,
     abortController?: AbortController
 ): Promise<CoqLspClient> {
     return createAbstractCoqLspClient(
-        CoqLspConfig.createClientConfig(coqLspServerPath),
+        CoqLspConfig.createClientConfig(coqLspServerPath, workspaceRootPath),
         logOutputChannel,
         eventLogger,
         abortController

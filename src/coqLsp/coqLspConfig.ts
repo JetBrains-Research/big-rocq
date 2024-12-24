@@ -36,7 +36,7 @@ export namespace CoqLspConfig {
     }
 
     export function createClientConfig(
-        coqLspServerPath: string = "coq-lsp",
+        coqLspServerPath: string,
         workspaceRootPath?: string
     ): CoqLspClientConfig {
         let obj: CoqLspClientConfig = {

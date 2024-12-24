@@ -1,6 +1,9 @@
 import { DirectoryItem, redirectToDirItem } from "../../generateDatasetViewer";
 
-export const folderViewHtml = (dirItems: DirectoryItem[], canGoBack: boolean) => `
+export const folderViewHtml = (
+    dirItems: DirectoryItem[],
+    canGoBack: boolean
+) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -89,13 +92,15 @@ export const folderViewHtml = (dirItems: DirectoryItem[], canGoBack: boolean) =>
         <h1>Folder View</h1>
         <ul>
             ${dirItems
-                .map((item) => `
+                .map(
+                    (item) => `
                 <li>
                     <a class="${item.isDir ? "folder" : "file"}" href="${redirectToDirItem(item)}" target="_self">
-                        <span class="icon">${item.isDir ? '📁' : '📄'}</span>
+                        <span class="icon">${item.isDir ? "📁" : "📄"}</span>
                         ${item.name}
                     </a>
-                </li>`)
+                </li>`
+                )
                 .join("")}
         </ul>
     </div>

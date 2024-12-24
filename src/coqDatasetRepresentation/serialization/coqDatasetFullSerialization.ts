@@ -5,7 +5,8 @@ import {
     CoqDataset,
     CoqDatasetAugmentedFile,
     CoqDatasetTheoremItem,
-    TheoremDatasetSample,
+    NodeAugmentationResult,
+    NodeId,
 } from "../coqDatasetModels";
 
 import {
@@ -19,7 +20,7 @@ import {
 } from "./serializationUtils/theoremData";
 
 export interface SerializedCoqAugmentedTheoremItem {
-    samples: TheoremDatasetSample[];
+    samples: Map<NodeId, NodeAugmentationResult>;
     proofTree: SerializedCoqProofTree;
 }
 
@@ -61,7 +62,7 @@ function serializeCoqDatasetTheoremItem(
             new TheoremData(item.parsedTheorem, theoremIndex)
         ),
         sourceFile: item.sourceFile,
-        augmentedTheorem: item.theoremAugmentationRes.map(
+        augmentedTheorem: item.proofTreeBuildResult.map(
             serializeCoqAugmentedTheoremItem
         ),
     };

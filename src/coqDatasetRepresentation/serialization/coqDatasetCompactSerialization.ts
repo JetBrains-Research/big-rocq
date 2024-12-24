@@ -31,9 +31,9 @@ export function compactSerializeCoqTheorem(
     theorem: CoqDatasetTheoremItem,
     ppType: PpMode
 ): CompactSerializedTheoremAugmentationResult {
-    return theorem.theoremAugmentationRes.map((item) =>
+    return theorem.proofTreeBuildResult.map((item) =>
         compactSerializeCoqProofTree(
-            item.proofTree,
+            item,
             ppType,
             theorem.parsedTheorem.name
         )

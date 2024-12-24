@@ -8,17 +8,20 @@ export interface TheoremDatasetSample {
     proof: string;
 }
 
+export type NodeAugmentationResult = Result<TheoremDatasetSample, Error>;
+export type NodeId = number;
+
 export interface CoqAugmentedTheoremItem {
-    samples: TheoremDatasetSample[];
+    samples: Map<NodeId, NodeAugmentationResult>; 
     proofTree: CoqProofTree;
 }
 
-export type TheoremAugmentationResult = Result<CoqAugmentedTheoremItem, Error>;
+export type ProofTreeBuildResult = Result<CoqAugmentedTheoremItem, Error>;
 
 export interface CoqDatasetTheoremItem {
     parsedTheorem: Theorem;
     sourceFile: string;
-    theoremAugmentationRes: TheoremAugmentationResult;
+    proofTreeBuildResult: ProofTreeBuildResult;
 }
 
 export interface CoqDatasetAugmentedFile {

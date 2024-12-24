@@ -1,6 +1,6 @@
+import { CompactSerializedTheoremAugmentationResult } from "../../serialization/coqDatasetCompactSerialization";
 
-
-export const proofTreeViewHtml = (jsonData: any) => `
+export const proofTreeViewHtml = (jsonData: CompactSerializedTheoremAugmentationResult) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,7 +15,7 @@ export const proofTreeViewHtml = (jsonData: any) => `
         .node foreignObject { overflow: visible; }
         .link { fill: none; stroke: black; }
         .edgelabel { 
-            font: 14px sans-serif; 
+            font: 12px sans-serif; 
             fill: black;
             font-weight: light; }
         .tooltip {
@@ -88,7 +88,7 @@ export const proofTreeViewHtml = (jsonData: any) => `
         <div id="popup-content"></div>
     </div>
     <script>
-        const data = ${JSON.stringify(jsonData.val.root, null, 2)};
+        const data = ${JSON.stringify(jsonData.ok ? jsonData.val.root : [], null, 2)};
 
         const width = 1000;
         const height = 600;
@@ -104,6 +104,32 @@ export const proofTreeViewHtml = (jsonData: any) => `
         const treeLayout = d3.tree().size([height - 100, width - 100]);
         treeLayout(root);
 
+        const legend = d3.select("body").append("div")
+            .attr("class", "legend")
+            .style("position", "absolute")
+            .style("top", "10px")
+            .style("right", "10px")
+            .style("background", "#fff")
+            .style("border", "1px solid #ccc")
+            .style("border-radius", "5px")
+            .style("padding", "10px")
+            .style("font", "14px sans-serif");
+
+        legend.append("div")
+            .style("display", "flex")
+            .style("align-items", "center")
+            .html(\`<svg width="20" height="20"><circle cx="10" cy="10" r="9" fill="#69b3a2"></circle></svg> <span style="margin-left: 5px;">Successfully augmented nodes</span>\`);
+
+        legend.append("div")
+            .style("display", "flex")
+            .style("align-items", "center")
+            .html(\`<svg width="20" height="20"><circle cx="10" cy="10" r="9" fill="darkorange"></circle></svg> <span style="margin-left: 5px;">Unable to augment</span>\`);
+
+        legend.append("div")
+            .style("display", "flex")
+            .style("align-items", "center")
+            .html(\`<svg width="20" height="20"><circle cx="10" cy="10" r="9" fill="#ff6961"></circle></svg> <span style="margin-left: 5px;">Empty states</span>\`);
+
         const link = svg.selectAll(".link")
             .data(root.links())
             .enter()
@@ -118,12 +144,13 @@ export const proofTreeViewHtml = (jsonData: any) => `
             .attr("stroke-width", 2)
             .attr("fill", "none");
 
-        link.append("text")
+        const edgeLabels = link.append("text")
             .attr("dy", -5)
             .attr("class", "edgelabel")
             .attr("x", d => (d.source.y + d.target.y) / 2)
             .attr("y", d => (d.source.x + d.target.x) / 2)
             .style("text-anchor", "middle")
+            .style("visibility", "hidden")
             .text(d => d.target.data.parentEdgeLabel);
 
         const node = svg.selectAll(".node")
@@ -135,25 +162,42 @@ export const proofTreeViewHtml = (jsonData: any) => `
 
         node.append("circle")
             .attr("r", 10)
-            .attr("fill", d => d.data.proofState === "Empty" ? "#ff6961" : "#69b3a2");
+            .attr("fill", d => {
+                if (d.data.subtreeProof.err && d.data.proofState) {
+                    return "darkorange";
+                }
+                return d.data.proofState === undefined ? "#ff6961" : "#69b3a2";
+            });
 
         const tooltip = d3.select("#tooltip");
         const popup = document.getElementById("popup");
         const popupContent = document.getElementById("popup-content");
 
         node.on("mouseover", function(event, d) {
-            tooltip.transition().duration(200).style("opacity", .9);
-            tooltip.html(d.data.proofState)
+            const parentEdgeLabel = d.parent ? d.data.parentEdgeLabel : "N/A";
+            tooltip.transition().duration(200).style("opacity", 0.9);
+            tooltip.html(\`
+                <strong>Parent Edge Label:</strong> \${parentEdgeLabel}<br>
+                <br>
+                \${d.data.proofState || "Empty state"}
+            \`)
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY - 28) + "px");
         }).on("mouseout", function() {
             tooltip.transition().duration(500).style("opacity", 0);
         }).on("click", function(event, d) {
             popup.style.display = "block";
-            popupContent.innerHTML = \`
-                <h4>Subtree Proof</h4>
-                <pre class="prettyprint">\${d.data.subtreeProof || "No proof available."}</pre>
-            \`;
+            if (d.data.subtreeProof.err) {
+                popupContent.innerHTML = \`
+                    <h4>Unable to build sample:</h4>
+                    <pre class="prettyprint">\${d.data.subtreeProof.val}</pre>
+                \`;
+            } else {
+                popupContent.innerHTML = \`
+                    <h4>Subtree Proof</h4>
+                    <pre class="prettyprint">\${d.data.subtreeProof.val}</pre>
+                \`;
+            }
             popup.style.left = (event.pageX + 10) + "px";
             popup.style.top = (event.pageY + 10) + "px";
         });

@@ -25,8 +25,8 @@ export interface CoqTheoremValidatorInterface {
         sourceDirPath: string,
         sourceFileContentPrefix: string[],
         prefixEndPosition: Position,
-        theoremsToCheck: TheoremDatasetSample[]
-    ): Promise<TheoremValidationResult[]>;
+        theoremsToCheck: Map<number, TheoremDatasetSample>
+    ): Promise<Map<number, TheoremValidationResult>>;
 
     dispose(): void;
 }
@@ -40,11 +40,11 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
         sourceDirPath: string,
         sourceFileContentPrefix: string[],
         prefixEndPosition: Position,
-        theoremsToCheck: TheoremDatasetSample[],
+        theoremsToCheck: Map<number, TheoremDatasetSample>,
         coqLspTimeoutMillis: number = 15000
-    ): Promise<TheoremValidationResult[]> {
+    ): Promise<Map<number, TheoremValidationResult>> {
         return await this.mutex.runExclusive(async () => {
-            const timeoutPromise = new Promise<TheoremValidationResult[]>(
+            const timeoutPromise = new Promise<Map<number, TheoremValidationResult>>(
                 (_, reject) => {
                     setTimeout(() => {
                         reject(
@@ -91,8 +91,8 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
         sourceDirPath: string,
         sourceFileContentPrefix: string[],
         prefixEndPosition: Position,
-        theoremsToCheck: TheoremDatasetSample[]
-    ): Promise<TheoremValidationResult[]> {
+        theoremsToCheck: Map<number, TheoremDatasetSample>
+    ): Promise<Map<number, TheoremValidationResult>> {
         const auxFileUri = this.buildAuxFileUri(
             sourceDirPath,
             prefixEndPosition
@@ -100,12 +100,12 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
         const sourceFileContent = sourceFileContentPrefix.join("\n");
         writeFileSync(auxFileUri.fsPath, sourceFileContent);
 
-        const results: TheoremValidationResult[] = [];
+        const results: Map<number, TheoremValidationResult> = new Map();
         try {
             await this.coqLspClient.openTextDocument(auxFileUri);
             let auxFileVersion = 1;
 
-            for (const theorem of theoremsToCheck) {
+            for (const [index, theorem] of theoremsToCheck) {
                 auxFileVersion += 1;
                 const appendedText = `\n\n${theoremDatasetSampleToString(theorem)}`;
                 appendFileSync(auxFileUri.fsPath, appendedText);
@@ -118,7 +118,7 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
                         auxFileVersion
                     );
 
-                results.push({
+                results.set(index, {
                     theorem,
                     isValid: diagnosticMessage === undefined,
                     diagnostic: diagnosticMessage,

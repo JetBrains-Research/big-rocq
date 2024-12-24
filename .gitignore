@@ -16,3 +16,5 @@ logs
 # Ignore generated build files inside dataset
 dataset/**/result
 dataset/**/.vscode/
+
+tempDatasetView*/

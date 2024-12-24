@@ -14,7 +14,6 @@ import { unwrapOrThrow } from "../utils/optionWrappers";
 import { Uri } from "../utils/uri";
 
 import { CoqProofTree } from "./coqProofTree";
-import { CoqProofTreeNode } from "./coqProofTreeNode";
 
 export class CoqProofTreeBuildingError extends Error {
     constructor(message: string) {
@@ -148,24 +147,28 @@ export async function buildCoqProofTree(
     const initialGoalNullable = initialGoals.goals.at(0);
     const initialGoal = unwrapOrThrow(initialGoalNullable);
 
-    const proofTreeRoot = CoqProofTreeNode.createRoot(initialGoal);
-    const proofTree = new CoqProofTree(proofTreeRoot);
+    const proofTree = new CoqProofTree(initialGoal);
 
+    // Refer to algorithm in src/coqProofTree/coqProofTree.ts to 
+    // understand semantics
+    let currentProofState: GoalConfig<PpString> = initialGoals; 
     for (const step of proof.proof_steps) {
         if (step.vernac_type === Vernacexpr.VernacEndProof) {
             break;
         }
 
-        if (step.vernac_type === Vernacexpr.VernacExtend) {
-            let goalAfterStep = await getStateAfterTactic(
-                step,
-                lspClient,
-                docUri,
-                docVersion
-            );
+        const goalAfterStep = await getStateAfterTactic(
+            step,
+            lspClient,
+            docUri,
+            docVersion
+        );
 
-            proofTree.applyToFirstUnsolvedGoal(step, goalAfterStep);
+        if (step.vernac_type === Vernacexpr.VernacExtend) {
+            proofTree.applyToFirstUnsolvedGoal(step, currentProofState, goalAfterStep);
         }
+
+        currentProofState = goalAfterStep;
     }
 
     return Ok(proofTree);

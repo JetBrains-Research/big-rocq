@@ -2,17 +2,16 @@ import * as fs from "fs";
 import * as path from "path";
 import { Err, Ok } from "ts-results";
 
-import { CoqDatasetAugmentedFile } from "../coqDatasetRepresentation/coqDatasetModels";
+import { CoqAugmentedTheoremItem, CoqDatasetAugmentedFile } from "../coqDatasetRepresentation/coqDatasetModels";
 
+import { folderViewHtml } from "./datasetVisualization/templates/dirView";
 import { proofTreeViewHtml } from "./datasetVisualization/templates/proofTree";
 import {
     TheoremList,
     theoremListViewHtml,
 } from "./datasetVisualization/templates/theoremList";
-import {
-    folderViewHtml
-} from "./datasetVisualization/templates/dirView";
 import { compactSerializeCoqTheorem } from "./serialization/coqDatasetCompactSerialization";
+import * as assert from "assert";
 
 // TODO: Move to params
 export const coqDataViewDir = "tempDatasetView";
@@ -24,7 +23,7 @@ function ensureDirExists(dir: string): void {
 }
 
 export interface DirectoryItem {
-    name: string; 
+    name: string;
     isDir: boolean;
     isFile: boolean;
 }
@@ -41,14 +40,15 @@ function dirItemFrom(fsDirent: fs.Dirent): DirectoryItem {
 export const fileIndexHtmlName = "index_file_view";
 export const dirIndexHtmlName = "index_dir_view";
 export function redirectToDirItem(dirItem: DirectoryItem): string {
-    return dirItem.isDir ? dirItem.name + `/${dirIndexHtmlName}.html` : dirItem.name + `/${fileIndexHtmlName}.html`;
+    return dirItem.isDir
+        ? dirItem.name + `/${dirIndexHtmlName}.html`
+        : dirItem.name + `/${fileIndexHtmlName}.html`;
 }
-
 
 export function generateFolderViewer(
     rootPath: string,
     curDirPath: string,
-    items: fs.Dirent[],
+    items: fs.Dirent[]
 ) {
     ensureDirExists(coqDataViewDir);
     const relativeFromRoot = path.relative(rootPath, curDirPath);
@@ -57,7 +57,10 @@ export function generateFolderViewer(
 
     const dirIndexHtmlPath = path.join(workingDir, `${dirIndexHtmlName}.html`);
     const folderViewItems = items.map(dirItemFrom);
-    const htmlTemplate = folderViewHtml(folderViewItems, rootPath != curDirPath);
+    const htmlTemplate = folderViewHtml(
+        folderViewItems,
+        rootPath !== curDirPath
+    );
 
     fs.writeFileSync(dirIndexHtmlPath, htmlTemplate);
 }
@@ -67,7 +70,7 @@ export function generateFileViewer(
     coqDatasetFile: CoqDatasetAugmentedFile
 ): void {
     ensureDirExists(coqDataViewDir);
-    
+
     const relativeFromRoot = path.relative(rootPath, coqDatasetFile.filePath);
 
     const fileSubdir = path.dirname(relativeFromRoot);
@@ -79,14 +82,14 @@ export function generateFileViewer(
     const theoremList: TheoremList[] = coqDatasetFile.augmentedTheorems.map(
         (augmentedTheorem) => ({
             thr_name: augmentedTheorem.parsedTheorem.name,
-            file_path: augmentedTheorem.theoremAugmentationRes.ok
+            file_path: augmentedTheorem.proofTreeBuildResult.ok
                 ? Ok(`${augmentedTheorem.parsedTheorem.name}.html`)
                 : Err(
-                        Error(
-                            augmentedTheorem.theoremAugmentationRes.val
-                                .message
-                        )
-                    ),
+                    Error(augmentedTheorem.proofTreeBuildResult.val.message)
+                ),
+            successfullyAugmentedNodesRatio: augmentedTheorem.proofTreeBuildResult.ok
+                ? calculateSuccessfullyAugmentedNodes(augmentedTheorem.proofTreeBuildResult.val)
+                : undefined
         })
     );
     const htmlTemplate = theoremListViewHtml(theoremList);
@@ -98,11 +101,35 @@ export function generateFileViewer(
             augmentedTheorem,
             "html"
         );
-        
+
         const htmlFilePath = path.join(fileDir, `${theoremName}.html`);
-        const htmlTemplate = proofTreeViewHtml(
-            compactSerializedTheorem
-        );
+        const htmlTemplate = proofTreeViewHtml(compactSerializedTheorem);
         fs.writeFileSync(htmlFilePath, htmlTemplate);
     });
+}
+
+function calculateSuccessfullyAugmentedNodes(
+    proofTreeWithAugmnetation: CoqAugmentedTheoremItem,
+): [number, number] {
+    const samples = proofTreeWithAugmnetation.samples;
+    const nodes = proofTreeWithAugmnetation.proofTree.dfs();
+
+    let total = 0;
+    let successful = 0;
+    for (const node of nodes) {
+        // If leaf, would always be not augmented
+        if (!node.isLeaf) {
+            assert(samples.has(node.index));
+            
+            // If root, would always be successfull 
+            if (!node.isRoot) {
+                total++;
+                if (samples.get(node.index)?.ok) {
+                    successful++;
+                }
+            }
+        }
+    }
+
+    return [successful, total];
 }
