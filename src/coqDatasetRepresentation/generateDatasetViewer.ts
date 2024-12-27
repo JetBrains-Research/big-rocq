@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { Err, Ok } from "ts-results";
 
-import { CoqAugmentedTheoremItem, CoqDatasetAugmentedFile } from "../coqDatasetRepresentation/coqDatasetModels";
+import { CoqDatasetAugmentedFile, CoqDatasetDirItem, CoqDatasetFolder } from "../coqDatasetRepresentation/coqDatasetModels";
 
 import { folderViewHtml } from "./datasetVisualization/templates/dirView";
 import { proofTreeViewHtml } from "./datasetVisualization/templates/proofTree";
@@ -11,7 +11,6 @@ import {
     theoremListViewHtml,
 } from "./datasetVisualization/templates/theoremList";
 import { compactSerializeCoqTheorem } from "./serialization/coqDatasetCompactSerialization";
-import * as assert from "assert";
 
 // TODO: Move to params
 export const coqDataViewDir = "tempDatasetView";
@@ -22,24 +21,17 @@ function ensureDirExists(dir: string): void {
     }
 }
 
-export interface DirectoryItem {
+export interface DirectoryItemView {
     name: string;
     isDir: boolean;
     isFile: boolean;
-}
-
-function dirItemFrom(fsDirent: fs.Dirent): DirectoryItem {
-    return {
-        name: path.parse(fsDirent.name).name,
-        isDir: fsDirent.isDirectory(),
-        isFile: fsDirent.isFile(),
-    };
+    augmentedNodesRatio: [number, number];
 }
 
 // TODO: Move to params
 export const fileIndexHtmlName = "index_file_view";
 export const dirIndexHtmlName = "index_dir_view";
-export function redirectToDirItem(dirItem: DirectoryItem): string {
+export function redirectToDirItem(dirItem: DirectoryItemView): string {
     return dirItem.isDir
         ? dirItem.name + `/${dirIndexHtmlName}.html`
         : dirItem.name + `/${fileIndexHtmlName}.html`;
@@ -48,21 +40,31 @@ export function redirectToDirItem(dirItem: DirectoryItem): string {
 export function generateFolderViewer(
     rootPath: string,
     curDirPath: string,
-    items: fs.Dirent[]
+    datasetFolder: CoqDatasetFolder,
 ) {
     ensureDirExists(coqDataViewDir);
     const relativeFromRoot = path.relative(rootPath, curDirPath);
     const workingDir = path.join(coqDataViewDir, relativeFromRoot);
     ensureDirExists(workingDir);
 
+    const items = datasetFolder.dirItems.map(viewFromDatasetItem);
+
     const dirIndexHtmlPath = path.join(workingDir, `${dirIndexHtmlName}.html`);
-    const folderViewItems = items.map(dirItemFrom);
     const htmlTemplate = folderViewHtml(
-        folderViewItems,
+        items,
         rootPath !== curDirPath
     );
 
     fs.writeFileSync(dirIndexHtmlPath, htmlTemplate);
+}
+
+function viewFromDatasetItem(dirItem: CoqDatasetDirItem): DirectoryItemView {
+    return {
+        name: dirItem.itemName,
+        isDir: dirItem.type === "dir",
+        isFile: dirItem.type === "file",
+        augmentedNodesRatio: dirItem.stats.augmentedNodesRatio,
+    };
 }
 
 export function generateFileViewer(
@@ -87,9 +89,7 @@ export function generateFileViewer(
                 : Err(
                     Error(augmentedTheorem.proofTreeBuildResult.val.message)
                 ),
-            successfullyAugmentedNodesRatio: augmentedTheorem.proofTreeBuildResult.ok
-                ? calculateSuccessfullyAugmentedNodes(augmentedTheorem.proofTreeBuildResult.val)
-                : undefined
+            augmentedNodesRatio: augmentedTheorem.augmentedNodesRatio
         })
     );
     const htmlTemplate = theoremListViewHtml(theoremList);
@@ -106,30 +106,4 @@ export function generateFileViewer(
         const htmlTemplate = proofTreeViewHtml(compactSerializedTheorem);
         fs.writeFileSync(htmlFilePath, htmlTemplate);
     });
-}
-
-function calculateSuccessfullyAugmentedNodes(
-    proofTreeWithAugmnetation: CoqAugmentedTheoremItem,
-): [number, number] {
-    const samples = proofTreeWithAugmnetation.samples;
-    const nodes = proofTreeWithAugmnetation.proofTree.dfs();
-
-    let total = 0;
-    let successful = 0;
-    for (const node of nodes) {
-        // If leaf, would always be not augmented
-        if (!node.isLeaf) {
-            assert(samples.has(node.index));
-            
-            // If root, would always be successfull 
-            if (!node.isRoot) {
-                total++;
-                if (samples.get(node.index)?.ok) {
-                    successful++;
-                }
-            }
-        }
-    }
-
-    return [successful, total];
 }

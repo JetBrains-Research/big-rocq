@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "fs";
+import { readFileSync, readdirSync, lstatSync } from "fs";
 import * as path from "path";
 import { Err, Ok } from "ts-results";
 import { Position } from "vscode-languageclient";
@@ -7,9 +7,12 @@ import { createCoqLspClient } from "../coqLsp/coqLspBuilders";
 import { CoqLspClient, DocumentSpec } from "../coqLsp/coqLspClient";
 
 import {
+    accumulateStats,
     CoqAugmentedTheoremItem,
     CoqDataset,
     CoqDatasetAugmentedFile,
+    CoqDatasetFolder,
+    emptyDatasetStats,
     NodeAugmentationResult,
 } from "../coqDatasetRepresentation/coqDatasetModels";
 import {
@@ -25,14 +28,9 @@ import Logger from "../logging/logger";
 import { Uri } from "../utils/uri";
 
 import { defaultUtilityRunParams } from "./utilityRunParams";
+import { calculateSuccessfullyAugmentedNodes } from "../coqDatasetRepresentation/coqDatasetUtils";
 
 export class ProjectProcessor {
-    private collectedDataset: CoqDataset = [];
-
-    get dataset(): CoqDataset {
-        return this.collectedDataset;
-    }
-
     private constructor(
         public readonly eventLogger: EventLogger,
         public readonly logger: Logger,
@@ -64,11 +62,30 @@ export class ProjectProcessor {
         );
     }
 
-    async processProject() {
-        await this.processDir(
-            defaultUtilityRunParams.targetRootPath,
-            defaultUtilityRunParams.targetRootPath
-        );
+    // TODO: Move rootPath param to function argument
+    async processProject(): Promise<CoqDataset> {
+        if (this.isCoqFile(defaultUtilityRunParams.targetRootPath)) {
+            return this.processFile(
+                defaultUtilityRunParams.targetRootPath,
+                defaultUtilityRunParams.targetRootPath
+            );
+        } else if (lstatSync(defaultUtilityRunParams.targetRootPath).isDirectory()) {
+            // In this case collectedDataset is updated from inside the
+            // function to gradually save progress (dumb way tho) in case of occured 
+            // errors
+            return this.processDir(
+                defaultUtilityRunParams.targetRootPath,
+                defaultUtilityRunParams.targetRootPath
+            );
+        } else {
+            throw new Error(
+                `Target path ${defaultUtilityRunParams.targetRootPath} is not a Coq file or a directory`
+            );
+        }
+    }
+
+    private isCoqFile(filePath: string): boolean {
+        return path.extname(filePath) === ".v";
     }
 
     private async processDir(
@@ -76,17 +93,21 @@ export class ProjectProcessor {
         accumulatedPath: string,
         generateDatasetViewer: boolean = true,
         coqLspTimeoutMillis: number = 150000
-    ) {
+    ): Promise<CoqDatasetFolder> {
+        const datasetFolderItem: CoqDatasetFolder = {
+            dirPath: accumulatedPath,
+            itemName: path.basename(accumulatedPath),
+            stats: emptyDatasetStats(),
+            dirItems: [],
+            type: "dir",
+        }
+
         try {
             const dirItemsAll = readdirSync(accumulatedPath, {
                 withFileTypes: true,
                 recursive: false,
             });
             const dirItems = dirItemsAll.filter((item) => item.isDirectory() || item.isFile() && item.name.endsWith(".v"));
-
-            if (generateDatasetViewer) {
-                generateFolderViewer(rootPath, accumulatedPath, dirItems);
-            }
 
             for (const item of dirItems) {
                 if (item.isDirectory()) {
@@ -104,17 +125,28 @@ export class ProjectProcessor {
                         coqLspTimeoutMillis
                     );
 
-                    this.collectedDataset.push(datasetItem);
+                    datasetFolderItem.dirItems.push(datasetItem);
+                    datasetFolderItem.stats = accumulateStats(
+                        datasetFolderItem.stats,
+                        datasetItem.stats
+                    );
                 }
             }
         } catch (e) {
             this.eventLogger.log(
-                "error-processing-file",
-                `Error reading folder ${rootPath}: ${e}`
+                "error-processing-folder",
+                `Error processing folder ${rootPath}: ${e}`
             );
         }
+
+        if (generateDatasetViewer) {
+            generateFolderViewer(rootPath, accumulatedPath, datasetFolderItem);
+        }
+
+        return datasetFolderItem;
     }
 
+    // TODO: Refactor
     private async processFile(
         rootPath: string,
         filePath: string,
@@ -128,6 +160,7 @@ export class ProjectProcessor {
 
         const fileUri = Uri.fromPath(filePath);
         const parentDir = path.dirname(filePath);
+        const fileName = path.parse(path.basename(filePath)).name;
         const docSpec: DocumentSpec = {
             uri: fileUri,
             version: 1,
@@ -135,7 +168,10 @@ export class ProjectProcessor {
         const theoremValidator = new CoqTheoremValidator(this.coqLspClient);
         const coqDatasetFileItem: CoqDatasetAugmentedFile = {
             filePath: filePath,
+            itemName: fileName,
             augmentedTheorems: [],
+            stats: emptyDatasetStats(),
+            type: "file",
         };
 
         await this.coqLspClient.withTextDocument(docSpec, async (_) => {
@@ -178,6 +214,7 @@ export class ProjectProcessor {
                         proofTreeBuildResult: Err(
                             new Error(proofTree.val.message)
                         ),
+                        augmentedNodesRatio: [0, 0],
                     });
                 } else {
                     const samples = augmentTreeToSamples(
@@ -225,11 +262,19 @@ export class ProjectProcessor {
                         proofTree: proofTree.val,
                     };
 
+                    const augmentedCount = calculateSuccessfullyAugmentedNodes(coqAugmentedTheorem);
+
                     coqDatasetFileItem.augmentedTheorems.push({
                         parsedTheorem: theorem,
                         sourceFile: filePath,
                         proofTreeBuildResult: Ok(coqAugmentedTheorem),
+                        augmentedNodesRatio: augmentedCount
                     });
+
+                    coqDatasetFileItem.stats.augmentedNodesRatio = [
+                        coqDatasetFileItem.stats.augmentedNodesRatio[0] + augmentedCount[0],
+                        coqDatasetFileItem.stats.augmentedNodesRatio[1] + augmentedCount[1],
+                    ];
                 }
             }
         });

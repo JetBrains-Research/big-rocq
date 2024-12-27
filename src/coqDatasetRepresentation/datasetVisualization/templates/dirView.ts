@@ -1,7 +1,7 @@
-import { DirectoryItem, redirectToDirItem } from "../../generateDatasetViewer";
+import { DirectoryItemView, redirectToDirItem } from "../../generateDatasetViewer";
 
 export const folderViewHtml = (
-    dirItems: DirectoryItem[],
+    dirItems: DirectoryItemView[],
     canGoBack: boolean
 ) => `
 <!DOCTYPE html>
@@ -84,6 +84,11 @@ export const folderViewHtml = (
             transform: scale(1.02);
             box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
         }
+        .stats {
+            font-size: 0.9em;
+            color: #777;
+            margin-left: auto;
+        }
     </style>
 </head>
 <body>
@@ -99,6 +104,11 @@ export const folderViewHtml = (
                         <span class="icon">${item.isDir ? "📁" : "📄"}</span>
                         ${item.name}
                     </a>
+                    ${
+                        item.augmentedNodesRatio
+                            ? `<span class="stats">(${item.augmentedNodesRatio[0]} / ${item.augmentedNodesRatio[1]} nodes augmented)</span>`
+                            : ""
+                    }
                 </li>`
                 )
                 .join("")}
