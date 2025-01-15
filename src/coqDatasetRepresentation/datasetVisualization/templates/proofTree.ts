@@ -1,6 +1,8 @@
 import { CompactSerializedTheoremAugmentationResult } from "../../serialization/coqDatasetCompactSerialization";
 
-export const proofTreeViewHtml = (jsonData: CompactSerializedTheoremAugmentationResult) => `
+export const proofTreeViewHtml = (
+    jsonData: CompactSerializedTheoremAugmentationResult
+) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>

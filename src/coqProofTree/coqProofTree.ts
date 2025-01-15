@@ -25,15 +25,15 @@ export class CoqProofTree {
     // smth other than Goal 1.
 
     // TODO: Say we have m goals before tactic application
-    // After tactic application in Baseline 1 I assume that 
+    // After tactic application in Baseline 1 I assume that
     // we will never have less than m - 1 goals
-    // Well, under assumtion that tactic (in baseline 1) is applied 
-    // to no more than 1 goal, that should be correct. 
+    // Well, under assumtion that tactic (in baseline 1) is applied
+    // to no more than 1 goal, that should be correct.
 
     applyToFirstUnsolvedGoal(
         appliedProofStep: ProofStep,
         proofStateBeforeTactic: GoalConfig<PpString>,
-        proofStateAfterTactic: GoalConfig<PpString>,
+        proofStateAfterTactic: GoalConfig<PpString>
     ): CoqProofTreeNode[] {
         const firstUnsolvedGoal = this.root.subtreeFind((node) => {
             return node.isUnsolvedGoal;
@@ -44,7 +44,12 @@ export class CoqProofTree {
             );
         }
 
-        return firstUnsolvedGoal.addChildren(this.nodeIndexer, appliedProofStep, proofStateBeforeTactic, proofStateAfterTactic);
+        return firstUnsolvedGoal.addChildren(
+            this.nodeIndexer,
+            appliedProofStep,
+            proofStateBeforeTactic,
+            proofStateAfterTactic
+        );
     }
 
     dfs(): CoqProofTreeNode[] {

@@ -50,11 +50,16 @@ export interface CoqDatasetStats {
 }
 
 // TODO: Move to utils
-export function accumulateStats(folderStats: CoqDatasetStats, itemStats: CoqDatasetStats): CoqDatasetStats {
+export function accumulateStats(
+    folderStats: CoqDatasetStats,
+    itemStats: CoqDatasetStats
+): CoqDatasetStats {
     return {
         augmentedNodesRatio: [
-            folderStats.augmentedNodesRatio[0] + itemStats.augmentedNodesRatio[0],
-            folderStats.augmentedNodesRatio[1] + itemStats.augmentedNodesRatio[1],
+            folderStats.augmentedNodesRatio[0] +
+                itemStats.augmentedNodesRatio[0],
+            folderStats.augmentedNodesRatio[1] +
+                itemStats.augmentedNodesRatio[1],
         ],
     };
 }

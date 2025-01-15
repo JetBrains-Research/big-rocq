@@ -1,10 +1,11 @@
+import * as assert from "assert";
+
 import { Goal, Hyp, PpString } from "../coqLsp/coqLspTypes";
 
 import { TheoremDatasetSample } from "../coqDatasetRepresentation/coqDatasetModels";
 import { ProofStep } from "../coqParser/parsedTypes";
 
 import { CoqProofTree } from "./coqProofTree";
-import * as assert from "assert";
 
 export function theoremDatasetSampleToString(
     sample: TheoremDatasetSample
@@ -47,7 +48,7 @@ export function constructTheoremWithProof(
 
 export function augmentTreeToSamples(
     coqProofTree: CoqProofTree,
-    currentTheoremName: string,
+    currentTheoremName: string
 ): Map<number, TheoremDatasetSample> {
     const nodes = coqProofTree.dfs();
 

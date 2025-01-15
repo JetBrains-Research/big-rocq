@@ -149,9 +149,9 @@ export async function buildCoqProofTree(
 
     const proofTree = new CoqProofTree(initialGoal);
 
-    // Refer to algorithm in src/coqProofTree/coqProofTree.ts to 
+    // Refer to algorithm in src/coqProofTree/coqProofTree.ts to
     // understand semantics
-    let currentProofState: GoalConfig<PpString> = initialGoals; 
+    let currentProofState: GoalConfig<PpString> = initialGoals;
     for (const step of proof.proof_steps) {
         if (step.vernac_type === Vernacexpr.VernacEndProof) {
             break;
@@ -165,7 +165,11 @@ export async function buildCoqProofTree(
         );
 
         if (step.vernac_type === Vernacexpr.VernacExtend) {
-            proofTree.applyToFirstUnsolvedGoal(step, currentProofState, goalAfterStep);
+            proofTree.applyToFirstUnsolvedGoal(
+                step,
+                currentProofState,
+                goalAfterStep
+            );
         }
 
         currentProofState = goalAfterStep;

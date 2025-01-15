@@ -1,10 +1,13 @@
 {
-  "name": "coq-data-augmentation",
+  "name": "big-rocq",
   "displayName": "Coq Data Augmentation",
   "description": "This utility takes a Coq project as input and uses some domain knowladge to increase a number of theorems in the dataset by a significant factor.",
   "repository": {
     "type": "git",
     "url": "https://github.com/K-dizzled/coq-data-augmentation.git"
+  },
+  "bin": {
+    "big-rocq": "./out/utilityRunner.js"
   },
   "version": "0.0.1",
   "engines": {
@@ -24,8 +27,9 @@
     "pretest": "npm run compile && npm run lint",
     "test": "npm run test-only",
     "clean": "rm -rf out",
-    "here": "node ./out/utilityRunner.js",
-    "prehere": "npm run pretest",
+    "augment": "node ./out/utilityRunner.js",
+    "local": "npm run augment",
+    "prelocal": "npm run pretest",
     "rebuild-test-resources": "cd ./src/test/resources/coqProj && make clean && make",
     "preclean-test": "npm run clean && npm run rebuild-test-resources && npm run compile && npm run lint",
     "clean-test": "npm run test-only"
@@ -71,6 +75,7 @@
     "pino-pretty": "^13.0.0",
     "tmp": "^0.2.3",
     "toml": "^3.0.0",
+    "ts-command-line-args": "^2.5.1",
     "ts-progress": "^0.1.9",
     "ts-results": "^3.3.0",
     "vscode-languageclient": "^9.0.1",

@@ -44,17 +44,17 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
         coqLspTimeoutMillis: number = 15000
     ): Promise<Map<number, TheoremValidationResult>> {
         return await this.mutex.runExclusive(async () => {
-            const timeoutPromise = new Promise<Map<number, TheoremValidationResult>>(
-                (_, reject) => {
-                    setTimeout(() => {
-                        reject(
-                            new CoqLspTimeoutError(
-                                `checkProofs timed out after ${coqLspTimeoutMillis} milliseconds`
-                            )
-                        );
-                    }, coqLspTimeoutMillis);
-                }
-            );
+            const timeoutPromise = new Promise<
+                Map<number, TheoremValidationResult>
+            >((_, reject) => {
+                setTimeout(() => {
+                    reject(
+                        new CoqLspTimeoutError(
+                            `checkProofs timed out after ${coqLspTimeoutMillis} milliseconds`
+                        )
+                    );
+                }, coqLspTimeoutMillis);
+            });
 
             return Promise.race([
                 this.validateTheoremsUnsafe(

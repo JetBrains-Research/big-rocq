@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { runTests } from "@vscode/test-electron";
 import * as path from "path";
 
@@ -16,12 +17,14 @@ async function main() {
             {} as { [key: string]: string | undefined }
         );
 
+        envVals["run-args"] = args.join(" ");
+
         await runTests({
             extensionDevelopmentPath,
             extensionTestsPath,
             extensionTestsEnv: envVals,
             // For offline testing
-            version: "1.95.3",
+            version: "1.96.3",
         });
     } catch (err) {
         console.error("Failed to run the utility", err);

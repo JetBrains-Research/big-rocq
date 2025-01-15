@@ -1,9 +1,11 @@
+import * as assert from "assert";
+
 import { Goal, GoalConfig, PpString } from "../coqLsp/coqLspTypes";
 
 import { ProofStep } from "../coqParser/parsedTypes";
 import { unwrapOrThrow } from "../utils/optionWrappers";
+
 import { NodeIndexer } from "./nodeIndexer";
-import * as assert from "assert";
 
 export type CoqProofTreeNodeType = Goal<PpString>;
 export type CoqProofTreeEdgeType = ProofStep;
@@ -27,7 +29,7 @@ export class CoqProofTreeNode {
 
     static createRoot(
         indexer: NodeIndexer,
-        proofState?: CoqProofTreeNodeType,
+        proofState?: CoqProofTreeNodeType
     ): CoqProofTreeNode {
         return new CoqProofTreeNode(indexer.next, undefined, proofState);
     }
@@ -35,7 +37,7 @@ export class CoqProofTreeNode {
     protected constructor(
         readonly index: number,
         parent?: CoqProofTreeConnectionType,
-        proofState?: CoqProofTreeNodeType,
+        proofState?: CoqProofTreeNodeType
     ) {
         this.proofState = proofState;
         if (!parent) {
@@ -53,7 +55,11 @@ export class CoqProofTreeNode {
         appliedProofStep: CoqProofTreeEdgeType,
         proofState?: CoqProofTreeNodeType
     ): CoqProofTreeNode {
-        return new CoqProofTreeNode(indexer.next, [this, appliedProofStep], proofState);
+        return new CoqProofTreeNode(
+            indexer.next,
+            [this, appliedProofStep],
+            proofState
+        );
     }
 
     // TODO: Prove correctness of approach for Baseline 1
@@ -65,16 +71,25 @@ export class CoqProofTreeNode {
         indexer: NodeIndexer,
         appliedProofStep: ProofStep,
         proofStateBeforeTactic: GoalConfig<PpString>,
-        proofStateAfterTactic: GoalConfig<PpString>,
+        proofStateAfterTactic: GoalConfig<PpString>
     ): CoqProofTreeNode[] {
-        if (proofStateBeforeTactic.goals.length - 1 === proofStateAfterTactic.goals.length) {
+        if (
+            proofStateBeforeTactic.goals.length - 1 ===
+            proofStateAfterTactic.goals.length
+        ) {
             // case A == B - 1
             const emptyState = this.addChild(indexer, appliedProofStep);
 
             return [emptyState];
-        } else if (proofStateBeforeTactic.goals.length <= proofStateAfterTactic.goals.length) {
+        } else if (
+            proofStateBeforeTactic.goals.length <=
+            proofStateAfterTactic.goals.length
+        ) {
             // case B + k = A (k possibly 0)
-            const k = proofStateAfterTactic.goals.length - proofStateBeforeTactic.goals.length + 1;
+            const k =
+                proofStateAfterTactic.goals.length -
+                proofStateBeforeTactic.goals.length +
+                1;
 
             const newSubgoals: CoqProofTreeNode[] = [];
             for (let i = 0; i < k; i++) {
@@ -84,9 +99,12 @@ export class CoqProofTreeNode {
             }
 
             return newSubgoals;
-        } 
+        }
 
-        assert(false, `Invariant for adding new node in baseline 1 broken for tactic ${appliedProofStep.text}`);
+        assert(
+            false,
+            `Invariant for adding new node in baseline 1 broken for tactic ${appliedProofStep.text}`
+        );
     }
 
     dfsTraverse(

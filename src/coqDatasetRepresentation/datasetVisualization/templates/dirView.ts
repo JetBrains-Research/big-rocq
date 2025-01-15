@@ -1,4 +1,7 @@
-import { DirectoryItemView, redirectToDirItem } from "../../generateDatasetViewer";
+import {
+    DirectoryItemView,
+    redirectToDirItem,
+} from "../../generateDatasetViewer";
 
 export const folderViewHtml = (
     dirItems: DirectoryItemView[],

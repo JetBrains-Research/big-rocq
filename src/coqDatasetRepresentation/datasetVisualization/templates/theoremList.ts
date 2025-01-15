@@ -1,9 +1,9 @@
 import { Result } from "ts-results";
 
 export interface TheoremList {
-    thr_name: string;
+    thrName: string;
     augmentedNodesRatio?: [number, number];
-    file_path: Result<string, Error>;
+    filePath: Result<string, Error>;
 }
 
 // TODO: Remove `back-button` when only one file is target
@@ -130,24 +130,24 @@ export const theoremListViewHtml = (theoremList: TheoremList[]) => `
         <h1>Theorem List</h1>
         <ul>
             ${theoremList
-        .map(({ thr_name, file_path, augmentedNodesRatio }) => {
-            const isSuccess = file_path.ok;
-            const linkOrMessage = isSuccess
-                ? `<a href="${file_path.val}" target="_self">View Theorem</a>`
-                : `<span class="tooltip error">Unable to augment theorem
-                            <span class="tooltip-text">${file_path.val.message}</span>
+                .map(({ thrName, filePath, augmentedNodesRatio }) => {
+                    const isSuccess = filePath.ok;
+                    const linkOrMessage = isSuccess
+                        ? `<a href="${filePath.val}" target="_self">View Theorem</a>`
+                        : `<span class="tooltip error">Unable to augment theorem
+                            <span class="tooltip-text">${filePath.val.message}</span>
                         </span>`;
-            const stats = augmentedNodesRatio
-                ? `<span class="stats">(${augmentedNodesRatio[0]} / ${augmentedNodesRatio[1]} nodes augmented)</span>`
-                : '';
-            return `
+                    const stats = augmentedNodesRatio
+                        ? `<span class="stats">(${augmentedNodesRatio[0]} / ${augmentedNodesRatio[1]} nodes augmented)</span>`
+                        : "";
+                    return `
                         <li class="${isSuccess ? "success" : "error"}">
-                            <span class="thr-name">${thr_name}</span>
-                            ${isSuccess ? stats : ''}
+                            <span class="thr-name">${thrName}</span>
+                            ${isSuccess ? stats : ""}
                             ${linkOrMessage}
                         </li>`;
-        })
-        .join("")}
+                })
+                .join("")}
         </ul>
     </div>
 </body>

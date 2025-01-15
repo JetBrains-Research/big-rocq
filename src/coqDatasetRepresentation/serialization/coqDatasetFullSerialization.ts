@@ -1,16 +1,9 @@
 import { Result } from "ts-results";
 
-import {
-    NodeAugmentationResult,
-    NodeId,
-} from "../coqDatasetModels";
+import { NodeAugmentationResult, NodeId } from "../coqDatasetModels";
 
-import {
-    SerializedCoqProofTree,
-} from "./serializationUtils/coqProofTree";
-import {
-    SerializedTheorem,
-} from "./serializationUtils/theoremData";
+import { SerializedCoqProofTree } from "./serializationUtils/coqProofTree";
+import { SerializedTheorem } from "./serializationUtils/theoremData";
 
 export interface SerializedCoqAugmentedTheoremItem {
     samples: Map<NodeId, NodeAugmentationResult>;

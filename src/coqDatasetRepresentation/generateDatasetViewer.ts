@@ -2,7 +2,11 @@ import * as fs from "fs";
 import * as path from "path";
 import { Err, Ok } from "ts-results";
 
-import { CoqDatasetAugmentedFile, CoqDatasetDirItem, CoqDatasetFolder } from "../coqDatasetRepresentation/coqDatasetModels";
+import {
+    CoqDatasetAugmentedFile,
+    CoqDatasetDirItem,
+    CoqDatasetFolder,
+} from "../coqDatasetRepresentation/coqDatasetModels";
 
 import { folderViewHtml } from "./datasetVisualization/templates/dirView";
 import { proofTreeViewHtml } from "./datasetVisualization/templates/proofTree";
@@ -40,7 +44,7 @@ export function redirectToDirItem(dirItem: DirectoryItemView): string {
 export function generateFolderViewer(
     rootPath: string,
     curDirPath: string,
-    datasetFolder: CoqDatasetFolder,
+    datasetFolder: CoqDatasetFolder
 ) {
     ensureDirExists(coqDataViewDir);
     const relativeFromRoot = path.relative(rootPath, curDirPath);
@@ -50,10 +54,7 @@ export function generateFolderViewer(
     const items = datasetFolder.dirItems.map(viewFromDatasetItem);
 
     const dirIndexHtmlPath = path.join(workingDir, `${dirIndexHtmlName}.html`);
-    const htmlTemplate = folderViewHtml(
-        items,
-        rootPath !== curDirPath
-    );
+    const htmlTemplate = folderViewHtml(items, rootPath !== curDirPath);
 
     fs.writeFileSync(dirIndexHtmlPath, htmlTemplate);
 }
@@ -83,13 +84,11 @@ export function generateFileViewer(
     const fileIndexHtmlPath = path.join(fileDir, `${fileIndexHtmlName}.html`);
     const theoremList: TheoremList[] = coqDatasetFile.augmentedTheorems.map(
         (augmentedTheorem) => ({
-            thr_name: augmentedTheorem.parsedTheorem.name,
-            file_path: augmentedTheorem.proofTreeBuildResult.ok
+            thrName: augmentedTheorem.parsedTheorem.name,
+            filePath: augmentedTheorem.proofTreeBuildResult.ok
                 ? Ok(`${augmentedTheorem.parsedTheorem.name}.html`)
-                : Err(
-                    Error(augmentedTheorem.proofTreeBuildResult.val.message)
-                ),
-            augmentedNodesRatio: augmentedTheorem.augmentedNodesRatio
+                : Err(Error(augmentedTheorem.proofTreeBuildResult.val.message)),
+            augmentedNodesRatio: augmentedTheorem.augmentedNodesRatio,
         })
     );
     const htmlTemplate = theoremListViewHtml(theoremList);

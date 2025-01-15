@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync, lstatSync } from "fs";
+import { lstatSync, readFileSync, readdirSync } from "fs";
 import * as path from "path";
 import { Err, Ok } from "ts-results";
 import { Position } from "vscode-languageclient";
@@ -7,14 +7,15 @@ import { createCoqLspClient } from "../coqLsp/coqLspBuilders";
 import { CoqLspClient, DocumentSpec } from "../coqLsp/coqLspClient";
 
 import {
-    accumulateStats,
     CoqAugmentedTheoremItem,
     CoqDataset,
     CoqDatasetAugmentedFile,
     CoqDatasetFolder,
-    emptyDatasetStats,
     NodeAugmentationResult,
+    accumulateStats,
+    emptyDatasetStats,
 } from "../coqDatasetRepresentation/coqDatasetModels";
+import { calculateSuccessfullyAugmentedNodes } from "../coqDatasetRepresentation/coqDatasetUtils";
 import {
     generateFileViewer,
     generateFolderViewer,
@@ -25,31 +26,28 @@ import { CoqTheoremValidator } from "../coqProofTree/coqTheoremValidator";
 import { augmentTreeToSamples } from "../coqProofTree/proofBuilder";
 import { EventLogger, Severity } from "../logging/eventLogger";
 import Logger from "../logging/logger";
+import { getProgressBar } from "../logging/progressBar";
 import { Uri } from "../utils/uri";
 
-import { defaultUtilityRunParams } from "./utilityRunParams";
-import { calculateSuccessfullyAugmentedNodes } from "../coqDatasetRepresentation/coqDatasetUtils";
-import { getProgressBar } from "../logging/progressBar";
+import { RunParams } from "./utilityRunParams";
 
 export class ProjectProcessor {
     private constructor(
         public readonly eventLogger: EventLogger,
         public readonly logger: Logger,
         public readonly abortController: AbortController,
+        public readonly runArgs: RunParams,
         private readonly coqLspClient: CoqLspClient
-    ) { }
+    ) {}
 
-    static async create(): Promise<ProjectProcessor> {
+    static async create(runArgs: RunParams): Promise<ProjectProcessor> {
         const eventLogger: EventLogger = new EventLogger();
-        const logger: Logger = new Logger(
-            eventLogger,
-            defaultUtilityRunParams.loggingLevel
-        );
+        const logger: Logger = new Logger(eventLogger, runArgs.loggingLevel);
         const abortController = new AbortController();
 
         const coqLspClient = await createCoqLspClient(
-            defaultUtilityRunParams.workspaceRootPath,
-            defaultUtilityRunParams.coqLspServerPath,
+            runArgs.workspaceRootPath,
+            runArgs.coqLspServerPath,
             undefined,
             eventLogger,
             abortController
@@ -59,28 +57,28 @@ export class ProjectProcessor {
             eventLogger,
             logger,
             abortController,
+            runArgs,
             coqLspClient
         );
     }
 
-    // TODO: Move rootPath param to function argument
     async processProject(): Promise<CoqDataset> {
-        if (this.isCoqFile(defaultUtilityRunParams.targetRootPath)) {
+        if (this.isCoqFile(this.runArgs.targetRootPath)) {
             return this.processFile(
-                defaultUtilityRunParams.targetRootPath,
-                defaultUtilityRunParams.targetRootPath
+                this.runArgs.targetRootPath,
+                this.runArgs.targetRootPath
             );
-        } else if (lstatSync(defaultUtilityRunParams.targetRootPath).isDirectory()) {
+        } else if (lstatSync(this.runArgs.targetRootPath).isDirectory()) {
             // In this case collectedDataset is updated from inside the
-            // function to gradually save progress (dumb way tho) in case of occured 
+            // function to gradually save progress (dumb way tho) in case of occured
             // errors
             return this.processDir(
-                defaultUtilityRunParams.targetRootPath,
-                defaultUtilityRunParams.targetRootPath
+                this.runArgs.targetRootPath,
+                this.runArgs.targetRootPath
             );
         } else {
             throw new Error(
-                `Target path ${defaultUtilityRunParams.targetRootPath} is not a Coq file or a directory`
+                `Target path ${this.runArgs.targetRootPath} is not a Coq file or a directory`
             );
         }
     }
@@ -101,14 +99,18 @@ export class ProjectProcessor {
             stats: emptyDatasetStats(),
             dirItems: [],
             type: "dir",
-        }
+        };
 
         try {
             const dirItemsAll = readdirSync(accumulatedPath, {
                 withFileTypes: true,
                 recursive: false,
             });
-            const dirItems = dirItemsAll.filter((item) => item.isDirectory() || item.isFile() && item.name.endsWith(".v"));
+            const dirItems = dirItemsAll.filter(
+                (item) =>
+                    item.isDirectory() ||
+                    (item.isFile() && item.name.endsWith(".v"))
+            );
 
             for (const item of dirItems) {
                 if (item.isDirectory()) {
@@ -137,8 +139,8 @@ export class ProjectProcessor {
             this.eventLogger.log(
                 "error-processing-folder",
                 `Error processing folder ${rootPath}: ${e}`,
-                null, 
-                Severity.ERROR 
+                null,
+                Severity.ERROR
             );
         }
 
@@ -248,14 +250,24 @@ export class ProjectProcessor {
                             coqLspTimeoutMillis
                         );
 
-                    const nodeAugmentationRes = new Map<number, NodeAugmentationResult>();
+                    const nodeAugmentationRes = new Map<
+                        number,
+                        NodeAugmentationResult
+                    >();
                     samples.forEach((sample, nodeId) => {
                         const validationRes = validationResults.get(nodeId);
                         if (validationRes === undefined) {
-                            throw new Error(`No validation result for node ${nodeId}`);
+                            throw new Error(
+                                `No validation result for node ${nodeId}`
+                            );
                         }
 
-                        nodeAugmentationRes.set(nodeId, validationRes.isValid ? Ok(sample) : Err(new Error(validationRes.diagnostic)));
+                        nodeAugmentationRes.set(
+                            nodeId,
+                            validationRes.isValid
+                                ? Ok(sample)
+                                : Err(new Error(validationRes.diagnostic))
+                        );
                     });
 
                     nodeAugmentationRes.forEach((res, nodeId) => {
@@ -270,18 +282,23 @@ export class ProjectProcessor {
                         proofTree: proofTree.val,
                     };
 
-                    const augmentedCount = calculateSuccessfullyAugmentedNodes(coqAugmentedTheorem);
+                    const augmentedCount =
+                        calculateSuccessfullyAugmentedNodes(
+                            coqAugmentedTheorem
+                        );
 
                     coqDatasetFileItem.augmentedTheorems.push({
                         parsedTheorem: theorem,
                         sourceFile: filePath,
                         proofTreeBuildResult: Ok(coqAugmentedTheorem),
-                        augmentedNodesRatio: augmentedCount
+                        augmentedNodesRatio: augmentedCount,
                     });
 
                     coqDatasetFileItem.stats.augmentedNodesRatio = [
-                        coqDatasetFileItem.stats.augmentedNodesRatio[0] + augmentedCount[0],
-                        coqDatasetFileItem.stats.augmentedNodesRatio[1] + augmentedCount[1],
+                        coqDatasetFileItem.stats.augmentedNodesRatio[0] +
+                            augmentedCount[0],
+                        coqDatasetFileItem.stats.augmentedNodesRatio[1] +
+                            augmentedCount[1],
                     ];
                 }
 
