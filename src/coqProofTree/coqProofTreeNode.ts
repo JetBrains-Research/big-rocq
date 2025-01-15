@@ -86,7 +86,7 @@ export class CoqProofTreeNode {
             return newSubgoals;
         } 
 
-        assert(false, "Invariant for adding new node in baseline 1 broken");
+        assert(false, `Invariant for adding new node in baseline 1 broken for tactic ${appliedProofStep.text}`);
     }
 
     dfsTraverse(

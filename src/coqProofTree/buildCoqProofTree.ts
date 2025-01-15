@@ -106,8 +106,8 @@ function throwIfHasGoalSelector(step: ProofStep) {
     // TODO: Figire out how to deal with goal selectors
     // https://coq.inria.fr/doc/V8.18.0/refman/proof-engine/ltac.html#goal-selectors
 
-    const goalSelectorRegex = /^(all:|\d+:)/;
-    if (goalSelectorRegex.test(step.text)) {
+    const goalSelectorRegex = /^(all:|\d+:|(\d+\s*,\s*)*\d+:)/;
+    if (goalSelectorRegex.test(step.text.trim())) {
         throw new CoqProofTreeBuildingError(
             `Goal selector found in step: ${step.text}`
         );

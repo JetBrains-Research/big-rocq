@@ -19,7 +19,7 @@ class Logger {
     constructor(eventLogger: EventLogger, logLevel: Severity = Severity.INFO) {
         eventLogger.subscribe(
             anyEventKeyword,
-            Severity.INFO,
+            logLevel,
             (message, data) => {
                 this.outputStreamWriter.info({
                     message,
@@ -27,18 +27,6 @@ class Logger {
                 });
             }
         );
-        if (logLevel === Severity.DEBUG) {
-            eventLogger.subscribe(
-                anyEventKeyword,
-                Severity.DEBUG,
-                (message, data) => {
-                    this.outputStreamWriter.info({
-                        message,
-                        data,
-                    });
-                }
-            );
-        }
     }
 
     dispose(): void {

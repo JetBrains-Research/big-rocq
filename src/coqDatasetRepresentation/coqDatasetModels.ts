@@ -45,6 +45,7 @@ export interface CoqDatasetFolder {
 export type CoqDatasetDirItem = CoqDatasetAugmentedFile | CoqDatasetFolder;
 
 export interface CoqDatasetStats {
+    // TODO: Add for how many theorems successfully built proof tree
     augmentedNodesRatio: [number, number];
 }
 

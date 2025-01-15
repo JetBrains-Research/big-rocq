@@ -300,7 +300,7 @@ export class CoqLspClientImpl implements CoqLspClient {
         uri: Uri,
         version: number,
         lastDocumentEndPosition?: Position,
-        timeout: number = 300000
+        timeout: number = 900000
     ): Promise<DiagnosticMessage> {
         await this.client.sendNotification(requestType, params);
 

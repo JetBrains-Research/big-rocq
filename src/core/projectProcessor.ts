@@ -23,12 +23,13 @@ import { parseCoqFile } from "../coqParser/parseCoqFile";
 import { buildCoqProofTree } from "../coqProofTree/buildCoqProofTree";
 import { CoqTheoremValidator } from "../coqProofTree/coqTheoremValidator";
 import { augmentTreeToSamples } from "../coqProofTree/proofBuilder";
-import { EventLogger } from "../logging/eventLogger";
+import { EventLogger, Severity } from "../logging/eventLogger";
 import Logger from "../logging/logger";
 import { Uri } from "../utils/uri";
 
 import { defaultUtilityRunParams } from "./utilityRunParams";
 import { calculateSuccessfullyAugmentedNodes } from "../coqDatasetRepresentation/coqDatasetUtils";
+import { getProgressBar } from "../logging/progressBar";
 
 export class ProjectProcessor {
     private constructor(
@@ -92,7 +93,7 @@ export class ProjectProcessor {
         rootPath: string,
         accumulatedPath: string,
         generateDatasetViewer: boolean = true,
-        coqLspTimeoutMillis: number = 150000
+        coqLspTimeoutMillis: number = 3000000
     ): Promise<CoqDatasetFolder> {
         const datasetFolderItem: CoqDatasetFolder = {
             dirPath: accumulatedPath,
@@ -135,7 +136,9 @@ export class ProjectProcessor {
         } catch (e) {
             this.eventLogger.log(
                 "error-processing-folder",
-                `Error processing folder ${rootPath}: ${e}`
+                `Error processing folder ${rootPath}: ${e}`,
+                null, 
+                Severity.ERROR 
             );
         }
 
@@ -148,11 +151,14 @@ export class ProjectProcessor {
 
     // TODO: Refactor
     private async processFile(
-        rootPath: string,
-        filePath: string,
+        rootPathRelative: string,
+        filePathRelative: string,
         createDatasetViewer: boolean = true,
-        coqLspTimeoutMillis: number = 150000
+        coqLspTimeoutMillis: number = 3000000
     ): Promise<CoqDatasetAugmentedFile> {
+        const rootPath = path.resolve(rootPathRelative);
+        const filePath = path.resolve(filePathRelative);
+
         this.eventLogger.log(
             "started-processing-file",
             `Processing file ${filePath}`
@@ -182,6 +188,8 @@ export class ProjectProcessor {
                 false,
                 this.eventLogger
             );
+
+            const progress = getProgressBar(fileName, parsedTheorems.length);
 
             this.eventLogger.log(
                 "finished-processing-file",
@@ -276,6 +284,8 @@ export class ProjectProcessor {
                         coqDatasetFileItem.stats.augmentedNodesRatio[1] + augmentedCount[1],
                     ];
                 }
+
+                progress.update();
             }
         });
 

@@ -8,9 +8,10 @@ export interface UtilityRunParams {
 }
 
 export const defaultUtilityRunParams: UtilityRunParams = {
-    loggingLevel: Severity.DEBUG,
+    loggingLevel: Severity.WARNING,
     coqLspServerPath:
-        "/nix/store/4jw388fmzk419bhkfi6g4cckbcwy1i9h-coq-lsp-0.1.8+8.19/bin/coq-lsp",
-    targetRootPath: "dataset/coqpilotTests/src/",
-    workspaceRootPath: "dataset/coqpilotTests",
+        "/Users/andrei/.opam/big-rocq/bin/coq-lsp",
+    targetRootPath: "dataset/hahn/",
+    // TODO: Handle not absolute path or leave comment that it is required 
+    workspaceRootPath: "/Users/andrei/MCS_Projects/coqPilotOther/bigRocq/dataset/hahn",
 };

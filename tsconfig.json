@@ -36,9 +36,8 @@
 		/* To Create decorators */
 		"experimentalDecorators": true,
 
-		/* To allow access to constants from package.json */
-		// "resolveJsonModule": true,
-		// "esModuleInterop": true,
+		/* To disable type checking in libraries, here used to patch ts-progress */
+		"skipLibCheck": true,
 	},
 	"exclude": [
 		"./out/**/*"

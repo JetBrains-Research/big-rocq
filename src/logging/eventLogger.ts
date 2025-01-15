@@ -1,7 +1,8 @@
 export enum Severity {
-    LOGIC,
-    INFO,
     DEBUG,
+    INFO,
+    WARNING,
+    ERROR,
 }
 
 export const anyEventKeyword = "any";
@@ -54,13 +55,13 @@ export class EventLogger {
         severity: Severity = Severity.INFO
     ) {
         this.events[event]?.forEach((eventSubscription) => {
-            if (eventSubscription.severity === severity) {
+            if (eventSubscription.severity <= severity) {
                 eventSubscription.callback(message, data);
             }
         });
 
         this.events[anyEventKeyword]?.forEach((eventSubscription) => {
-            if (eventSubscription.severity === severity) {
+            if (eventSubscription.severity <= severity) {
                 eventSubscription.callback(message, data);
             }
         });

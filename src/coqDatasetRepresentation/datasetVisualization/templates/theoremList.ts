@@ -6,6 +6,7 @@ export interface TheoremList {
     file_path: Result<string, Error>;
 }
 
+// TODO: Remove `back-button` when only one file is target
 export const theoremListViewHtml = (theoremList: TheoremList[]) => `
 <!DOCTYPE html>
 <html lang="en">

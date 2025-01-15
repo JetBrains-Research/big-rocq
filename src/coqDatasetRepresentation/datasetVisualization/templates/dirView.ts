@@ -3,7 +3,20 @@ import { DirectoryItemView, redirectToDirItem } from "../../generateDatasetViewe
 export const folderViewHtml = (
     dirItems: DirectoryItemView[],
     canGoBack: boolean
-) => `
+) => {
+    const aggregatedStats = dirItems.reduce(
+        (acc, item) => {
+            if (item.augmentedNodesRatio) {
+                acc.count += 1;
+                acc.totalBefore += item.augmentedNodesRatio[0];
+                acc.totalAfter += item.augmentedNodesRatio[1];
+            }
+            return acc;
+        },
+        { count: 0, totalBefore: 0, totalAfter: 0 }
+    );
+
+    return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29,6 +42,28 @@ export const folderViewHtml = (
             text-align: center;
             color: #555;
             font-size: 1.8rem;
+        }
+        .stats-summary {
+            background: linear-gradient(to right, #e3f2fd, #e8f5e9);
+            border: 1px solid #cfd8dc;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 6px;
+            font-size: 1em;
+            color: #37474f;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .stats-summary .stat {
+            flex: 1;
+            text-align: center;
+            font-weight: bold;
+        }
+        .stats-summary .stat span {
+            display: block;
+            font-size: 1.2em;
+            color: #1e88e5;
         }
         ul {
             list-style: none;
@@ -95,6 +130,14 @@ export const folderViewHtml = (
     ${canGoBack ? `<a href="../index_dir_view.html" class="back-button">🔙</a>` : ""}
     <div class="container">
         <h1>Folder View</h1>
+        <div class="stats-summary">
+            <div class="stat">
+                Total Items<br><span>${aggregatedStats.count}</span>
+            </div>
+            <div class="stat">
+                Augmented Nodes<br><span>${aggregatedStats.totalBefore} / ${aggregatedStats.totalAfter}</span>
+            </div>
+        </div>
         <ul>
             ${dirItems
                 .map(
@@ -116,3 +159,4 @@ export const folderViewHtml = (
     </div>
 </body>
 </html>`;
+};
