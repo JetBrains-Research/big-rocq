@@ -41,7 +41,8 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
         sourceFileContentPrefix: string[],
         prefixEndPosition: Position,
         theoremsToCheck: Map<number, TheoremDatasetSample>,
-        coqLspTimeoutMillis: number = 15000
+        theoremValidationTimeoutMillis: number = 150000,
+        fileTypeCheckingTimeoutMillis: number = 150000
     ): Promise<Map<number, TheoremValidationResult>> {
         return await this.mutex.runExclusive(async () => {
             const timeoutPromise = new Promise<
@@ -50,10 +51,10 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
                 setTimeout(() => {
                     reject(
                         new CoqLspTimeoutError(
-                            `checkProofs timed out after ${coqLspTimeoutMillis} milliseconds`
+                            `checkProofs timed out after ${theoremValidationTimeoutMillis} milliseconds`
                         )
                     );
-                }, coqLspTimeoutMillis);
+                }, theoremValidationTimeoutMillis);
             });
 
             return Promise.race([
@@ -61,7 +62,8 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
                     sourceDirPath,
                     sourceFileContentPrefix,
                     prefixEndPosition,
-                    theoremsToCheck
+                    theoremsToCheck,
+                    fileTypeCheckingTimeoutMillis
                 ),
                 timeoutPromise,
             ]);
@@ -91,7 +93,8 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
         sourceDirPath: string,
         sourceFileContentPrefix: string[],
         prefixEndPosition: Position,
-        theoremsToCheck: Map<number, TheoremDatasetSample>
+        theoremsToCheck: Map<number, TheoremDatasetSample>,
+        fileTypeCheckingTimeoutMillis: number
     ): Promise<Map<number, TheoremValidationResult>> {
         const auxFileUri = this.buildAuxFileUri(
             sourceDirPath,
@@ -102,7 +105,11 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
 
         const results: Map<number, TheoremValidationResult> = new Map();
         try {
-            await this.coqLspClient.openTextDocument(auxFileUri);
+            await this.coqLspClient.openTextDocument(
+                auxFileUri,
+                undefined,
+                fileTypeCheckingTimeoutMillis
+            );
             let auxFileVersion = 1;
 
             for (const [index, theorem] of theoremsToCheck) {
@@ -115,7 +122,8 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
                         sourceFileContentPrefix,
                         appendedText,
                         auxFileUri,
-                        auxFileVersion
+                        auxFileVersion,
+                        fileTypeCheckingTimeoutMillis
                     );
 
                 results.set(index, {
@@ -131,7 +139,8 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
                     sourceFileContentPrefix,
                     "",
                     auxFileUri,
-                    auxFileVersion
+                    auxFileVersion,
+                    fileTypeCheckingTimeoutMillis
                 );
             }
         } finally {

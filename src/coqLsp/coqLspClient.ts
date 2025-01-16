@@ -71,10 +71,15 @@ export interface CoqLspClient extends Disposable {
         oldDocumentText: string[],
         appendedSuffix: string,
         uri: Uri,
-        version: number
+        version: number,
+        timeoutMillis?: number
     ): Promise<DiagnosticMessage>;
 
-    openTextDocument(uri: Uri, version?: number): Promise<DiagnosticMessage>;
+    openTextDocument(
+        uri: Uri,
+        version?: number,
+        timeoutMillis?: number
+    ): Promise<DiagnosticMessage>;
 
     closeTextDocument(uri: Uri): Promise<void>;
 
@@ -150,24 +155,27 @@ export class CoqLspClientImpl implements CoqLspClient {
         oldDocumentText: string[],
         appendedSuffix: string,
         uri: Uri,
-        version: number = 1
+        version: number = 1,
+        timeoutMillis: number = 900000
     ): Promise<DiagnosticMessage> {
         return await this.mutex.runExclusive(async () => {
             return this.updateTextDocumentUnsafe(
                 oldDocumentText,
                 appendedSuffix,
                 uri,
-                version
+                version,
+                timeoutMillis
             );
         });
     }
 
     async openTextDocument(
         uri: Uri,
-        version: number = 1
+        version: number = 1,
+        timeoutMillis: number = 900000
     ): Promise<DiagnosticMessage> {
         return await this.mutex.runExclusive(async () => {
-            return this.openTextDocumentUnsafe(uri, version);
+            return this.openTextDocumentUnsafe(uri, version, timeoutMillis);
         });
     }
 
@@ -300,7 +308,7 @@ export class CoqLspClientImpl implements CoqLspClient {
         uri: Uri,
         version: number,
         lastDocumentEndPosition?: Position,
-        timeout: number = 900000
+        timeoutMillis: number = 900000
     ): Promise<DiagnosticMessage> {
         await this.client.sendNotification(requestType, params);
 
@@ -341,13 +349,13 @@ export class CoqLspClientImpl implements CoqLspClient {
             )
         );
 
-        while (timeout > 0 && (pendingProgress || pendingDiagnostic)) {
+        while (timeoutMillis > 0 && (pendingProgress || pendingDiagnostic)) {
             await this.sleep(100);
-            timeout -= 100;
+            timeoutMillis -= 100;
         }
 
         if (
-            timeout <= 0 ||
+            timeoutMillis <= 0 ||
             pendingProgress ||
             pendingDiagnostic ||
             awaitedDiagnostics === undefined
@@ -374,7 +382,8 @@ export class CoqLspClientImpl implements CoqLspClient {
         oldDocumentText: string[],
         appendedSuffix: string,
         uri: Uri,
-        version: number = 1
+        version: number = 1,
+        timeoutMillis: number = 900000
     ): Promise<DiagnosticMessage> {
         const updatedText = oldDocumentText.join("\n") + appendedSuffix;
         const oldEndPosition = this.getTextEndPosition(oldDocumentText);
@@ -396,13 +405,15 @@ export class CoqLspClientImpl implements CoqLspClient {
             params,
             uri,
             version,
-            oldEndPosition
+            oldEndPosition,
+            timeoutMillis
         );
     }
 
     private async openTextDocumentUnsafe(
         uri: Uri,
-        version: number = 1
+        version: number = 1,
+        timeoutMillis: number = 900000
     ): Promise<DiagnosticMessage> {
         const docText = readFileSync(uri.fsPath).toString();
 
@@ -419,7 +430,9 @@ export class CoqLspClientImpl implements CoqLspClient {
             DidOpenTextDocumentNotification.type,
             params,
             uri,
-            version
+            version,
+            undefined,
+            timeoutMillis
         );
     }
 

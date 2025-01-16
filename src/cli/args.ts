@@ -4,7 +4,8 @@ export interface BigRocqCliArguments {
     targetRootPath: string;
     workspaceRootPath: string;
     coqLspServerPath: string;
-    timeout: number;
+    theoremAugmentationTimeout: number;
+    fileTimeout: number;
 
     version?: boolean;
     verbose?: boolean;
@@ -24,7 +25,19 @@ export const args = parse<BigRocqCliArguments>(
             multiple: false,
             defaultValue: "coq-lsp",
         },
-        timeout: { type: Number, alias: "t", defaultValue: 300000 },
+        theoremAugmentationTimeout: {
+            type: Number,
+            alias: "t",
+            defaultValue: 300000,
+            description:
+                "Every produced sample is checked manually to be correctly compiling/type-checking. This timeout means how much time you give the util to check all new samples for a single theorem.",
+        },
+        fileTimeout: {
+            type: Number,
+            defaultValue: 90000,
+            description:
+                "Non-trivially explainable semantics. Set bigger if you have files with a lot of theorems or in case you fail with timeout.",
+        },
         version: { type: Boolean, optional: true, alias: "v" },
         verbose: { type: Boolean, optional: true },
         debug: { type: Boolean, optional: true, alias: "d" },

@@ -5,5 +5,6 @@ export interface RunParams {
     coqLspServerPath: string;
     targetRootPath: string;
     workspaceRootPath: string;
-    coqLspTimeout: number;
+    theoremValidationTimeoutMillis: number;
+    fileTypeCheckingTimeoutMillis: number;
 }

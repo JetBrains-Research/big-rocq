@@ -90,8 +90,7 @@ export class ProjectProcessor {
     private async processDir(
         rootPath: string,
         accumulatedPath: string,
-        generateDatasetViewer: boolean = true,
-        coqLspTimeoutMillis: number = 3000000
+        generateDatasetViewer: boolean = true
     ): Promise<CoqDatasetFolder> {
         const datasetFolderItem: CoqDatasetFolder = {
             dirPath: accumulatedPath,
@@ -117,15 +116,13 @@ export class ProjectProcessor {
                     await this.processDir(
                         rootPath,
                         `${accumulatedPath}/${item.name}`,
-                        generateDatasetViewer,
-                        coqLspTimeoutMillis
+                        generateDatasetViewer
                     );
                 } else if (item.isFile() && item.name.endsWith(".v")) {
                     const datasetItem = await this.processFile(
                         rootPath,
                         `${accumulatedPath}/${item.name}`,
-                        generateDatasetViewer,
-                        coqLspTimeoutMillis
+                        generateDatasetViewer
                     );
 
                     datasetFolderItem.dirItems.push(datasetItem);
@@ -155,8 +152,7 @@ export class ProjectProcessor {
     private async processFile(
         rootPathRelative: string,
         filePathRelative: string,
-        createDatasetViewer: boolean = true,
-        coqLspTimeoutMillis: number = 3000000
+        createDatasetViewer: boolean = true
     ): Promise<CoqDatasetAugmentedFile> {
         const rootPath = path.resolve(rootPathRelative);
         const filePath = path.resolve(filePathRelative);
@@ -247,7 +243,8 @@ export class ProjectProcessor {
                             contentPrefix,
                             theoremStartPos,
                             samples,
-                            coqLspTimeoutMillis
+                            this.runArgs.theoremValidationTimeoutMillis,
+                            this.runArgs.fileTypeCheckingTimeoutMillis
                         );
 
                     const nodeAugmentationRes = new Map<
