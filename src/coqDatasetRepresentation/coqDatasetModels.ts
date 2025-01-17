@@ -21,7 +21,7 @@ export type ProofTreeBuildResult = Result<CoqAugmentedTheoremItem, Error>;
 
 export interface CoqDatasetTheoremItem {
     parsedTheorem: Theorem;
-    sourceFile: string;
+    sourceFilePath: string;
     proofTreeBuildResult: ProofTreeBuildResult;
     augmentedNodesRatio: [number, number];
 }
@@ -29,6 +29,7 @@ export interface CoqDatasetTheoremItem {
 export interface CoqDatasetAugmentedFile {
     filePath: string;
     itemName: string;
+    initialFileContent: string[];
     augmentedTheorems: CoqDatasetTheoremItem[];
     stats: CoqDatasetStats;
     type: "file";

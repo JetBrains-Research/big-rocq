@@ -14,6 +14,7 @@ import {
     TheoremList,
     theoremListViewHtml,
 } from "./datasetVisualization/templates/theoremList";
+import { generateCoqAugmentedFile } from "./generateCoqAugmentedFile";
 import { compactSerializeCoqTheorem } from "./serialization/coqDatasetCompactSerialization";
 
 // TODO: Move to params
@@ -70,7 +71,8 @@ function viewFromDatasetItem(dirItem: CoqDatasetDirItem): DirectoryItemView {
 
 export function generateFileViewer(
     rootPath: string,
-    coqDatasetFile: CoqDatasetAugmentedFile
+    coqDatasetFile: CoqDatasetAugmentedFile,
+    generateAugmentedCoqFile: boolean
 ): void {
     ensureDirExists(coqDataViewDir);
 
@@ -93,6 +95,9 @@ export function generateFileViewer(
     );
     const htmlTemplate = theoremListViewHtml(theoremList);
     fs.writeFileSync(fileIndexHtmlPath, htmlTemplate);
+    if (generateAugmentedCoqFile) {
+        generateCoqAugmentedFile(fileDir, coqDatasetFile);
+    }
 
     coqDatasetFile.augmentedTheorems.forEach((augmentedTheorem) => {
         const theoremName = augmentedTheorem.parsedTheorem.name;

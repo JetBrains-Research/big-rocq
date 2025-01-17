@@ -6,6 +6,8 @@ export interface BigRocqCliArguments {
     coqLspServerPath: string;
     theoremAugmentationTimeout: number;
     fileTimeout: number;
+    generateDatasetViewer: boolean;
+    generateAugmentedCoqFiles: boolean;
 
     version?: boolean;
     verbose?: boolean;
@@ -37,6 +39,18 @@ export const args = parse<BigRocqCliArguments>(
             defaultValue: 90000,
             description:
                 "Non-trivially explainable semantics. Set bigger if you have files with a lot of theorems or in case you fail with timeout.",
+        },
+        generateDatasetViewer: {
+            type: Boolean,
+            defaultValue: true,
+            description:
+                "Generate a simple HTML viewer for the dataset. It will be saved in the targetRootPath.",
+        },
+        generateAugmentedCoqFiles: {
+            type: Boolean,
+            defaultValue: true,
+            description:
+                "Whether to generate the augmented Coq files which will contain all augmented samples in the place of initial theorems. Zurzeit ist möglich nur wenn generateDatasetViewer ist true, andernfalls wird es ignoriert.",
         },
         version: { type: Boolean, optional: true, alias: "v" },
         verbose: { type: Boolean, optional: true },

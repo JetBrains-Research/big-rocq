@@ -7,4 +7,6 @@ export interface RunParams {
     workspaceRootPath: string;
     theoremValidationTimeoutMillis: number;
     fileTypeCheckingTimeoutMillis: number;
+    generateDatasetViewer: boolean;
+    generateAugmentedCoqFiles: boolean;
 }

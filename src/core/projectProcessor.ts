@@ -74,7 +74,8 @@ export class ProjectProcessor {
             // errors
             return this.processDir(
                 this.runArgs.targetRootPath,
-                this.runArgs.targetRootPath
+                this.runArgs.targetRootPath,
+                this.runArgs.generateDatasetViewer
             );
         } else {
             throw new Error(
@@ -163,6 +164,8 @@ export class ProjectProcessor {
         );
 
         const fileUri = Uri.fromPath(filePath);
+        const fileLines = readFileSync(fileUri.fsPath).toString().split("\n");
+
         const parentDir = path.dirname(filePath);
         const fileName = path.parse(path.basename(filePath)).name;
         const docSpec: DocumentSpec = {
@@ -173,6 +176,7 @@ export class ProjectProcessor {
         const coqDatasetFileItem: CoqDatasetAugmentedFile = {
             filePath: filePath,
             itemName: fileName,
+            initialFileContent: fileLines,
             augmentedTheorems: [],
             stats: emptyDatasetStats(),
             type: "file",
@@ -216,7 +220,7 @@ export class ProjectProcessor {
 
                     coqDatasetFileItem.augmentedTheorems.push({
                         parsedTheorem: theorem,
-                        sourceFile: filePath,
+                        sourceFilePath: filePath,
                         proofTreeBuildResult: Err(
                             new Error(proofTree.val.message)
                         ),
@@ -229,10 +233,6 @@ export class ProjectProcessor {
                     );
 
                     const theoremStartPos = theorem.statement_range.start;
-                    const fileLines = readFileSync(fileUri.fsPath)
-                        .toString()
-                        .split("\n");
-
                     const contentPrefix = this.getTextBeforePosition(
                         fileLines,
                         theoremStartPos
@@ -286,7 +286,7 @@ export class ProjectProcessor {
 
                     coqDatasetFileItem.augmentedTheorems.push({
                         parsedTheorem: theorem,
-                        sourceFile: filePath,
+                        sourceFilePath: filePath,
                         proofTreeBuildResult: Ok(coqAugmentedTheorem),
                         augmentedNodesRatio: augmentedCount,
                     });
@@ -304,7 +304,11 @@ export class ProjectProcessor {
         });
 
         if (createDatasetViewer) {
-            generateFileViewer(rootPath, coqDatasetFileItem);
+            generateFileViewer(
+                rootPath,
+                coqDatasetFileItem,
+                this.runArgs.generateAugmentedCoqFiles
+            );
         }
 
         return coqDatasetFileItem;

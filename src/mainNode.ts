@@ -1,6 +1,7 @@
 import { parseUtilityRunParams } from "./cli/argParser";
 import { BigRocqCliArguments, args } from "./cli/args";
 import { ProjectProcessor } from "./core/projectProcessor";
+import { print } from "./logging/colorLogging";
 
 export async function run() {
     const runArgs = args;
@@ -28,12 +29,14 @@ async function preprocessCommands(args: BigRocqCliArguments): Promise<boolean> {
         if (!versionData || !versionData.version) {
             console.error("Could not find the version data");
         } else {
-            console.log(
+            print(
                 ` 
             ======================
             BigRocq version: ${versionData.version}
             ======================
-            `
+            `,
+            "yellow",
+            "bold"
             );
         }
 

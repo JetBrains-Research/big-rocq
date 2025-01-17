@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-import { Position, Range } from "vscode-languageclient";
+import { Range } from "vscode-languageclient";
 
 import { CoqLspClient } from "../coqLsp/coqLspClient";
 import {
@@ -12,6 +12,7 @@ import {
 
 import { EventLogger } from "../logging/eventLogger";
 import { throwOnAbort } from "../utils/abortUtils";
+import { getTextInRange } from "../utils/documentUtils";
 import { Uri } from "../utils/uri";
 
 import { ProofStep, Theorem, TheoremProof, Vernacexpr } from "./parsedTypes";
@@ -202,31 +203,6 @@ function checkIfExprEAdmit(expr: any): boolean {
         return getProofEndCommand(expr) === "Admitted";
     } catch (error) {
         return false;
-    }
-}
-
-function getTextInRange(
-    start: Position,
-    end: Position,
-    lines: string[],
-    preserveLineBreaks = false
-): string {
-    if (start.line === end.line) {
-        return lines[start.line].substring(start.character, end.character);
-    } else {
-        let text = lines[start.line].substring(start.character);
-        for (let i = start.line + 1; i < end.line; i++) {
-            if (preserveLineBreaks) {
-                text += "\n";
-            }
-            text += lines[i];
-        }
-        if (preserveLineBreaks) {
-            text += "\n";
-        }
-        text += lines[end.line].substring(0, end.character);
-
-        return text;
     }
 }
 
