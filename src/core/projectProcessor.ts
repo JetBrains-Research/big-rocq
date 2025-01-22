@@ -11,15 +11,18 @@ import {
     CoqDataset,
     CoqDatasetAugmentedFile,
     CoqDatasetFolder,
+    CoqDatasetTheoremItem,
     NodeAugmentationResult,
-    accumulateStats,
-    emptyDatasetStats,
 } from "../coqDatasetRepresentation/coqDatasetModels";
-import { calculateSuccessfullyAugmentedNodes } from "../coqDatasetRepresentation/coqDatasetUtils";
 import {
     generateFileViewer,
     generateFolderViewer,
 } from "../coqDatasetRepresentation/generateDatasetViewer";
+import {
+    accumulateStats,
+    createTheoremWithStats,
+    emptyDatasetStats,
+} from "../coqDatasetRepresentation/statisticsCalculation";
 import { parseCoqFile } from "../coqParser/parseCoqFile";
 import { buildCoqProofTree } from "../coqProofTree/buildCoqProofTree";
 import { CoqTheoremValidator } from "../coqProofTree/coqTheoremValidator";
@@ -218,14 +221,17 @@ export class ProjectProcessor {
                         `Error processing theorem ${theorem.name}: ${proofTree.val.message}`
                     );
 
-                    coqDatasetFileItem.augmentedTheorems.push({
-                        parsedTheorem: theorem,
-                        sourceFilePath: filePath,
-                        proofTreeBuildResult: Err(
-                            new Error(proofTree.val.message)
-                        ),
-                        augmentedNodesRatio: [0, 0],
-                    });
+                    const theoremItem: CoqDatasetTheoremItem =
+                        createTheoremWithStats(
+                            theorem,
+                            filePath,
+                            Err(new Error(proofTree.val.message))
+                        );
+                    coqDatasetFileItem.augmentedTheorems.push(theoremItem);
+                    coqDatasetFileItem.stats = accumulateStats(
+                        coqDatasetFileItem.stats,
+                        theoremItem.stats
+                    );
                 } else {
                     const samples = augmentTreeToSamples(
                         proofTree.val,
@@ -279,24 +285,18 @@ export class ProjectProcessor {
                         proofTree: proofTree.val,
                     };
 
-                    const augmentedCount =
-                        calculateSuccessfullyAugmentedNodes(
-                            coqAugmentedTheorem
+                    const theoremItem: CoqDatasetTheoremItem =
+                        createTheoremWithStats(
+                            theorem,
+                            filePath,
+                            Ok(coqAugmentedTheorem)
                         );
 
-                    coqDatasetFileItem.augmentedTheorems.push({
-                        parsedTheorem: theorem,
-                        sourceFilePath: filePath,
-                        proofTreeBuildResult: Ok(coqAugmentedTheorem),
-                        augmentedNodesRatio: augmentedCount,
-                    });
-
-                    coqDatasetFileItem.stats.augmentedNodesRatio = [
-                        coqDatasetFileItem.stats.augmentedNodesRatio[0] +
-                            augmentedCount[0],
-                        coqDatasetFileItem.stats.augmentedNodesRatio[1] +
-                            augmentedCount[1],
-                    ];
+                    coqDatasetFileItem.augmentedTheorems.push(theoremItem);
+                    coqDatasetFileItem.stats = accumulateStats(
+                        coqDatasetFileItem.stats,
+                        theoremItem.stats
+                    );
                 }
 
                 progress.update();

@@ -23,7 +23,7 @@ export interface CoqDatasetTheoremItem {
     parsedTheorem: Theorem;
     sourceFilePath: string;
     proofTreeBuildResult: ProofTreeBuildResult;
-    augmentedNodesRatio: [number, number];
+    stats: CoqDatasetStats;
 }
 
 export interface CoqDatasetAugmentedFile {
@@ -43,32 +43,13 @@ export interface CoqDatasetFolder {
     type: "dir";
 }
 
-export type CoqDatasetDirItem = CoqDatasetAugmentedFile | CoqDatasetFolder;
-
 export interface CoqDatasetStats {
-    // TODO: Add for how many theorems successfully built proof tree
-    augmentedNodesRatio: [number, number];
+    augmentedNodesRatio: Ratio;
+    proofTreeBuildRatio: Ratio;
 }
 
-// TODO: Move to utils
-export function accumulateStats(
-    folderStats: CoqDatasetStats,
-    itemStats: CoqDatasetStats
-): CoqDatasetStats {
-    return {
-        augmentedNodesRatio: [
-            folderStats.augmentedNodesRatio[0] +
-                itemStats.augmentedNodesRatio[0],
-            folderStats.augmentedNodesRatio[1] +
-                itemStats.augmentedNodesRatio[1],
-        ],
-    };
-}
+export type Ratio = [number, number];
 
-export function emptyDatasetStats(): CoqDatasetStats {
-    return {
-        augmentedNodesRatio: [0, 0],
-    };
-}
+export type CoqDatasetDirItem = CoqDatasetAugmentedFile | CoqDatasetFolder;
 
 export type CoqDataset = CoqDatasetDirItem;

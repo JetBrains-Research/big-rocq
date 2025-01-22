@@ -90,9 +90,9 @@ function aggregateGeneratedSamples(theorem: CoqDatasetTheoremItem): string {
 
     const result =
         "(** Successfully built proof tree. Successfully augmented " +
-        theorem.augmentedNodesRatio[0] +
+        theorem.stats.augmentedNodesRatio[0] +
         "/" +
-        theorem.augmentedNodesRatio[1] +
+        theorem.stats.augmentedNodesRatio[1] +
         " non-trivial nodes (after initial) **)\n\n";
 
     const samples = theorem.proofTreeBuildResult.val.samples;

@@ -6,6 +6,7 @@ import {
     CoqDatasetAugmentedFile,
     CoqDatasetDirItem,
     CoqDatasetFolder,
+    CoqDatasetStats,
 } from "../coqDatasetRepresentation/coqDatasetModels";
 
 import { folderViewHtml } from "./datasetVisualization/templates/dirView";
@@ -30,7 +31,7 @@ export interface DirectoryItemView {
     name: string;
     isDir: boolean;
     isFile: boolean;
-    augmentedNodesRatio: [number, number];
+    itemStats: CoqDatasetStats;
 }
 
 // TODO: Move to params
@@ -55,7 +56,11 @@ export function generateFolderViewer(
     const items = datasetFolder.dirItems.map(viewFromDatasetItem);
 
     const dirIndexHtmlPath = path.join(workingDir, `${dirIndexHtmlName}.html`);
-    const htmlTemplate = folderViewHtml(items, rootPath !== curDirPath);
+    const htmlTemplate = folderViewHtml(
+        items,
+        datasetFolder.stats,
+        rootPath !== curDirPath
+    );
 
     fs.writeFileSync(dirIndexHtmlPath, htmlTemplate);
 }
@@ -65,7 +70,7 @@ function viewFromDatasetItem(dirItem: CoqDatasetDirItem): DirectoryItemView {
         name: dirItem.itemName,
         isDir: dirItem.type === "dir",
         isFile: dirItem.type === "file",
-        augmentedNodesRatio: dirItem.stats.augmentedNodesRatio,
+        itemStats: dirItem.stats,
     };
 }
 
@@ -90,7 +95,7 @@ export function generateFileViewer(
             filePath: augmentedTheorem.proofTreeBuildResult.ok
                 ? Ok(`${augmentedTheorem.parsedTheorem.name}.html`)
                 : Err(Error(augmentedTheorem.proofTreeBuildResult.val.message)),
-            augmentedNodesRatio: augmentedTheorem.augmentedNodesRatio,
+            augmentedNodesRatio: augmentedTheorem.stats.augmentedNodesRatio,
         })
     );
     const htmlTemplate = theoremListViewHtml(theoremList);

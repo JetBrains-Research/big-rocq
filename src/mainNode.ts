@@ -35,8 +35,8 @@ async function preprocessCommands(args: BigRocqCliArguments): Promise<boolean> {
             BigRocq version: ${versionData.version}
             ======================
             `,
-            "yellow",
-            "bold"
+                "yellow",
+                "bold"
             );
         }
 

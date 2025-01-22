@@ -1,3 +1,4 @@
+import { CoqDatasetStats } from "../../coqDatasetModels";
 import {
     DirectoryItemView,
     redirectToDirItem,
@@ -5,20 +6,9 @@ import {
 
 export const folderViewHtml = (
     dirItems: DirectoryItemView[],
+    aggregatedStats: CoqDatasetStats,
     canGoBack: boolean
 ) => {
-    const aggregatedStats = dirItems.reduce(
-        (acc, item) => {
-            if (item.augmentedNodesRatio) {
-                acc.count += 1;
-                acc.totalBefore += item.augmentedNodesRatio[0];
-                acc.totalAfter += item.augmentedNodesRatio[1];
-            }
-            return acc;
-        },
-        { count: 0, totalBefore: 0, totalAfter: 0 }
-    );
-
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -135,10 +125,13 @@ export const folderViewHtml = (
         <h1>Folder View</h1>
         <div class="stats-summary">
             <div class="stat">
-                Total Items<br><span>${aggregatedStats.count}</span>
+                Total Items<br><span>${dirItems.length}</span>
             </div>
             <div class="stat">
-                Augmented Nodes<br><span>${aggregatedStats.totalBefore} / ${aggregatedStats.totalAfter}</span>
+                Successful theorems<br><span>${aggregatedStats.proofTreeBuildRatio[0]} / ${aggregatedStats.proofTreeBuildRatio[1]}</span>
+            </div>
+            <div class="stat">
+                Augmented Nodes<br><span>${aggregatedStats.augmentedNodesRatio[0]} / ${aggregatedStats.augmentedNodesRatio[1]}</span>
             </div>
         </div>
         <ul>
@@ -150,11 +143,7 @@ export const folderViewHtml = (
                         <span class="icon">${item.isDir ? "📁" : "📄"}</span>
                         ${item.name}
                     </a>
-                    ${
-                        item.augmentedNodesRatio
-                            ? `<span class="stats">(${item.augmentedNodesRatio[0]} / ${item.augmentedNodesRatio[1]} nodes augmented)</span>`
-                            : ""
-                    }
+                    <span class="stats">(${item.itemStats.augmentedNodesRatio[0]} / ${item.itemStats.augmentedNodesRatio[1]} nodes augmented)</span>
                 </li>`
                 )
                 .join("")}

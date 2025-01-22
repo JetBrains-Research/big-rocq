@@ -94,6 +94,7 @@ function throwIfUnexpectedVernacType(step: ProofStep) {
         Vernacexpr.VernacStartTheoremProof,
         // Tactics
         Vernacexpr.VernacExtend,
+        Vernacexpr.VernacPrint,
     ];
     if (!expectedVernacTypes.includes(step.vernac_type)) {
         throw new CoqProofTreeBuildingError(
