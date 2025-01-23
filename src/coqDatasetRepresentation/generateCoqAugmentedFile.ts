@@ -2,7 +2,7 @@ import { writeFileSync } from "fs";
 import * as path from "path";
 
 import { theoremDatasetSampleToString } from "../coqProofTree/proofBuilder";
-import { getTextInRange } from "../utils/documentUtils";
+import { ensureDirExists, getTextInRange } from "../utils/documentUtils";
 
 import {
     CoqDatasetAugmentedFile,
@@ -10,18 +10,35 @@ import {
     TheoremDatasetSample,
 } from "./coqDatasetModels";
 
+// TODO: Refactor to params
+const coqAugmentedFilesDir = "tempDatasetView/augmentedFiles";
+
+/**
+ * @param rootPath The relative root path of the project being processed 
+ * @param coqDatasetFile The processed data from which the augmented file will be generated
+ * 
+ * @returns Returns the length of the generated file
+ */
 export function generateCoqAugmentedFile(
-    targetFolderPath: string,
+    rootPath: string,
     coqDatasetFile: CoqDatasetAugmentedFile
-): void {
+): number {
+    ensureDirExists(coqAugmentedFilesDir);
+    const relativeFromRoot = path.relative(rootPath, coqDatasetFile.filePath);
+
+    const fileSubdir = path.dirname(relativeFromRoot);
     const fileName = path.parse(coqDatasetFile.filePath).name;
+    const fileDir = path.join(coqAugmentedFilesDir, fileSubdir, fileName);
+    ensureDirExists(fileDir);
+
     const augmentedFilePath = path.join(
-        targetFolderPath,
+        fileDir,
         `${fileName}_augmented.v`
     );
     const augmentedFileContent = createCoqAugmentedFile(coqDatasetFile);
 
     writeFileSync(augmentedFilePath, augmentedFileContent);
+    return augmentedFileContent.split("\n").length;
 }
 
 function createCoqAugmentedFile(

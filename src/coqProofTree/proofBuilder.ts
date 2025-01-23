@@ -43,7 +43,7 @@ export function constructTheoremWithProof(
         predefinedIndex
     );
     const proof = proofSteps.map((step) => step.text).join("\n");
-    return { theoremStatement, proof };
+    return { theoremStatement, proof, proofLength: proofSteps.length };
 }
 
 export function augmentTreeToSamples(

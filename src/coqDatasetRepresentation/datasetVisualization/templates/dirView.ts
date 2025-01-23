@@ -3,8 +3,10 @@ import {
     DirectoryItemView,
     redirectToDirItem,
 } from "../../generateDatasetViewer";
+import { computeAverageProofLength } from "../../statisticsCalculation";
 
 export const folderViewHtml = (
+    folderName: string,
     dirItems: DirectoryItemView[],
     aggregatedStats: CoqDatasetStats,
     canGoBack: boolean
@@ -44,12 +46,13 @@ export const folderViewHtml = (
             border-radius: 6px;
             font-size: 1em;
             color: #37474f;
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            justify-items: center;
             align-items: center;
         }
         .stats-summary .stat {
-            flex: 1;
             text-align: center;
             font-weight: bold;
         }
@@ -125,6 +128,9 @@ export const folderViewHtml = (
         <h1>Folder View</h1>
         <div class="stats-summary">
             <div class="stat">
+                Folder name<br><span>${folderName}</span>
+            </div>
+            <div class="stat">
                 Total Items<br><span>${dirItems.length}</span>
             </div>
             <div class="stat">
@@ -132,6 +138,12 @@ export const folderViewHtml = (
             </div>
             <div class="stat">
                 Augmented Nodes<br><span>${aggregatedStats.augmentedNodesRatio[0]} / ${aggregatedStats.augmentedNodesRatio[1]}</span>
+            </div>
+            <div class="stat">
+                Avarage new proof length<br><span>${computeAverageProofLength(aggregatedStats)} tactics</span>
+            </div>
+            <div class="stat">
+                LOC after augmentation<br><span> ${aggregatedStats.locChangeAfterAugmentation[0] === 0 ? "Not available" : `${aggregatedStats.locChangeAfterAugmentation[0]} ➡️ ${aggregatedStats.locChangeAfterAugmentation[1]}`}</span>
             </div>
         </div>
         <ul>

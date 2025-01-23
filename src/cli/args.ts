@@ -50,7 +50,7 @@ export const args = parse<BigRocqCliArguments>(
             type: Boolean,
             defaultValue: true,
             description:
-                "Whether to generate the augmented Coq files which will contain all augmented samples in the place of initial theorems. Zurzeit ist möglich nur wenn generateDatasetViewer ist true, andernfalls wird es ignoriert.",
+                "Whether to generate the augmented Coq files which will contain all augmented samples in the place of initial theorems.",
         },
         version: { type: Boolean, optional: true, alias: "v" },
         verbose: { type: Boolean, optional: true },

@@ -20,6 +20,7 @@ import {
 } from "../coqDatasetRepresentation/generateDatasetViewer";
 import {
     accumulateStats,
+    accumulateTheoremStats,
     createTheoremWithStats,
     emptyDatasetStats,
 } from "../coqDatasetRepresentation/statisticsCalculation";
@@ -33,6 +34,7 @@ import { getProgressBar } from "../logging/progressBar";
 import { Uri } from "../utils/uri";
 
 import { RunParams } from "./utilityRunParams";
+import { generateCoqAugmentedFile } from "../coqDatasetRepresentation/generateCoqAugmentedFile";
 
 export class ProjectProcessor {
     private constructor(
@@ -120,13 +122,11 @@ export class ProjectProcessor {
                     await this.processDir(
                         rootPath,
                         `${accumulatedPath}/${item.name}`,
-                        generateDatasetViewer
                     );
                 } else if (item.isFile() && item.name.endsWith(".v")) {
                     const datasetItem = await this.processFile(
                         rootPath,
                         `${accumulatedPath}/${item.name}`,
-                        generateDatasetViewer
                     );
 
                     datasetFolderItem.dirItems.push(datasetItem);
@@ -156,7 +156,6 @@ export class ProjectProcessor {
     private async processFile(
         rootPathRelative: string,
         filePathRelative: string,
-        createDatasetViewer: boolean = true
     ): Promise<CoqDatasetAugmentedFile> {
         const rootPath = path.resolve(rootPathRelative);
         const filePath = path.resolve(filePathRelative);
@@ -228,7 +227,7 @@ export class ProjectProcessor {
                             Err(new Error(proofTree.val.message))
                         );
                     coqDatasetFileItem.augmentedTheorems.push(theoremItem);
-                    coqDatasetFileItem.stats = accumulateStats(
+                    coqDatasetFileItem.stats = accumulateTheoremStats(
                         coqDatasetFileItem.stats,
                         theoremItem.stats
                     );
@@ -293,7 +292,7 @@ export class ProjectProcessor {
                         );
 
                     coqDatasetFileItem.augmentedTheorems.push(theoremItem);
-                    coqDatasetFileItem.stats = accumulateStats(
+                    coqDatasetFileItem.stats = accumulateTheoremStats(
                         coqDatasetFileItem.stats,
                         theoremItem.stats
                     );
@@ -303,12 +302,19 @@ export class ProjectProcessor {
             }
         });
 
-        if (createDatasetViewer) {
+        if (this.runArgs.generateDatasetViewer) {
             generateFileViewer(
                 rootPath,
                 coqDatasetFileItem,
-                this.runArgs.generateAugmentedCoqFiles
             );
+        }
+
+        if (this.runArgs.generateAugmentedCoqFiles) {
+            const augmentedFileLength = generateCoqAugmentedFile(rootPath, coqDatasetFileItem);
+            coqDatasetFileItem.stats.locChangeAfterAugmentation = [
+                fileLines.length,
+                augmentedFileLength,
+            ]
         }
 
         return coqDatasetFileItem;

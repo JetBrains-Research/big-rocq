@@ -7,6 +7,7 @@ import { CoqProofTree } from "../coqProofTree/coqProofTree";
 export interface TheoremDatasetSample {
     theoremStatement: string;
     proof: string;
+    proofLength: number;
 }
 
 export type NodeAugmentationResult = Result<TheoremDatasetSample, Error>;
@@ -23,7 +24,7 @@ export interface CoqDatasetTheoremItem {
     parsedTheorem: Theorem;
     sourceFilePath: string;
     proofTreeBuildResult: ProofTreeBuildResult;
-    stats: CoqDatasetStats;
+    stats: CoqTheoremStats;
 }
 
 export interface CoqDatasetAugmentedFile {
@@ -43,9 +44,15 @@ export interface CoqDatasetFolder {
     type: "dir";
 }
 
-export interface CoqDatasetStats {
+export interface CoqDatasetStats extends CoqTheoremStats {
+    // Lines of code before and after augmentation
+    locChangeAfterAugmentation: [number, number];
+}
+
+export interface CoqTheoremStats {
     augmentedNodesRatio: Ratio;
     proofTreeBuildRatio: Ratio;
+    augmentedProofLengthCounts: Map<number, number>;
 }
 
 export type Ratio = [number, number];

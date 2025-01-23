@@ -15,17 +15,11 @@ import {
     TheoremList,
     theoremListViewHtml,
 } from "./datasetVisualization/templates/theoremList";
-import { generateCoqAugmentedFile } from "./generateCoqAugmentedFile";
 import { compactSerializeCoqTheorem } from "./serialization/coqDatasetCompactSerialization";
+import { ensureDirExists } from "../utils/documentUtils";
 
 // TODO: Move to params
 export const coqDataViewDir = "tempDatasetView";
-
-function ensureDirExists(dir: string): void {
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-    }
-}
 
 export interface DirectoryItemView {
     name: string;
@@ -50,17 +44,14 @@ export function generateFolderViewer(
 ) {
     ensureDirExists(coqDataViewDir);
     const relativeFromRoot = path.relative(rootPath, curDirPath);
+    const folderName = path.basename(curDirPath);
     const workingDir = path.join(coqDataViewDir, relativeFromRoot);
     ensureDirExists(workingDir);
 
     const items = datasetFolder.dirItems.map(viewFromDatasetItem);
 
     const dirIndexHtmlPath = path.join(workingDir, `${dirIndexHtmlName}.html`);
-    const htmlTemplate = folderViewHtml(
-        items,
-        datasetFolder.stats,
-        rootPath !== curDirPath
-    );
+    const htmlTemplate = folderViewHtml(folderName, items, datasetFolder.stats, rootPath !== curDirPath);
 
     fs.writeFileSync(dirIndexHtmlPath, htmlTemplate);
 }
@@ -77,7 +68,6 @@ function viewFromDatasetItem(dirItem: CoqDatasetDirItem): DirectoryItemView {
 export function generateFileViewer(
     rootPath: string,
     coqDatasetFile: CoqDatasetAugmentedFile,
-    generateAugmentedCoqFile: boolean
 ): void {
     ensureDirExists(coqDataViewDir);
 
@@ -100,9 +90,6 @@ export function generateFileViewer(
     );
     const htmlTemplate = theoremListViewHtml(theoremList);
     fs.writeFileSync(fileIndexHtmlPath, htmlTemplate);
-    if (generateAugmentedCoqFile) {
-        generateCoqAugmentedFile(fileDir, coqDatasetFile);
-    }
 
     coqDatasetFile.augmentedTheorems.forEach((augmentedTheorem) => {
         const theoremName = augmentedTheorem.parsedTheorem.name;
