@@ -27,6 +27,12 @@ export interface CoqDatasetTheoremItem {
     stats: CoqTheoremStats;
 }
 
+export interface CoqDatasetUnvalidatedTheorem {
+    parsedTheorem: Theorem;
+    sourceFilePath: string;
+    proofTreeBuildResult: Result<CoqProofTree, Error>;
+}
+
 export interface CoqDatasetAugmentedFile {
     filePath: string;
     itemName: string;
@@ -34,6 +40,13 @@ export interface CoqDatasetAugmentedFile {
     augmentedTheorems: CoqDatasetTheoremItem[];
     stats: CoqDatasetStats;
     type: "file";
+}
+
+export interface CoqDatasetUnaugmentedFile {
+    filePath: string;
+    itemName: string;
+    initialFileContent: string[];
+    theoremsWithProofTrees: CoqDatasetUnvalidatedTheorem[];
 }
 
 export interface CoqDatasetFolder {

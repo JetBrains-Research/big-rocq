@@ -68,7 +68,7 @@ export interface CoqLspClient extends Disposable {
     getFlecheDocument(uri: Uri): Promise<FlecheDocument>;
 
     updateTextDocument(
-        oldDocumentText: string[],
+        oldDocumentText: string,
         appendedSuffix: string,
         uri: Uri,
         version: number,
@@ -152,7 +152,7 @@ export class CoqLspClientImpl implements CoqLspClient {
     }
 
     async updateTextDocument(
-        oldDocumentText: string[],
+        oldDocumentText: string,
         appendedSuffix: string,
         uri: Uri,
         version: number = 1,
@@ -379,14 +379,14 @@ export class CoqLspClientImpl implements CoqLspClient {
     }
 
     private async updateTextDocumentUnsafe(
-        oldDocumentText: string[],
+        oldDocumentText: string,
         appendedSuffix: string,
         uri: Uri,
         version: number = 1,
         timeoutMillis: number = 900000
     ): Promise<DiagnosticMessage> {
-        const updatedText = oldDocumentText.join("\n") + appendedSuffix;
-        const oldEndPosition = this.getTextEndPosition(oldDocumentText);
+        const updatedText = oldDocumentText + appendedSuffix;
+        const oldEndPosition = this.getTextEndPosition(oldDocumentText.split("\n"));
 
         const params: DidChangeTextDocumentParams = {
             textDocument: {

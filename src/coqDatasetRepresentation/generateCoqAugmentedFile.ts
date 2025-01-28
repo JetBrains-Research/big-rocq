@@ -21,7 +21,8 @@ const coqAugmentedFilesDir = "tempDatasetView/augmentedFiles";
  */
 export function generateCoqAugmentedFile(
     rootPath: string,
-    coqDatasetFile: CoqDatasetAugmentedFile
+    coqDatasetFile: CoqDatasetAugmentedFile,
+    debug: boolean = false
 ): number {
     ensureDirExists(coqAugmentedFilesDir);
     const relativeFromRoot = path.relative(rootPath, coqDatasetFile.filePath);
@@ -35,14 +36,15 @@ export function generateCoqAugmentedFile(
         fileDir,
         `${fileName}_augmented.v`
     );
-    const augmentedFileContent = createCoqAugmentedFile(coqDatasetFile);
+    const augmentedFileContent = createCoqAugmentedFile(coqDatasetFile, debug);
 
     writeFileSync(augmentedFilePath, augmentedFileContent);
     return augmentedFileContent.split("\n").length;
 }
 
 function createCoqAugmentedFile(
-    coqDatasetFile: CoqDatasetAugmentedFile
+    coqDatasetFile: CoqDatasetAugmentedFile,
+    debug: boolean
 ): string {
     const fileContent = coqDatasetFile.initialFileContent;
 
@@ -91,28 +93,40 @@ function createCoqAugmentedFile(
             fileContent,
             true
         );
-        const generatedSamples = aggregateGeneratedSamples(theorem);
+        const generatedSamples = aggregateGeneratedSamples(theorem, debug);
 
         collectedContent +=
-            theoremContent + "\n\n" + generatedSamples + contentAfterTheorem;
+            theoremContent + generatedSamples + contentAfterTheorem;
     }
 
     return collectedContent;
 }
 
-function aggregateGeneratedSamples(theorem: CoqDatasetTheoremItem): string {
+function aggregateGeneratedSamples(
+    theorem: CoqDatasetTheoremItem,
+    debug: boolean
+): string {
     if (theorem.proofTreeBuildResult.err) {
-        return "(** Error: Proof tree build failed, no samples available. **)";
+        return debug ? "\n\n(** Error: Proof tree build failed, no samples available. **)" : "";
     }
 
-    const result =
-        "(** Successfully built proof tree. Successfully augmented " +
-        theorem.stats.augmentedNodesRatio[0] +
-        "/" +
-        theorem.stats.augmentedNodesRatio[1] +
-        " non-trivial nodes (after initial) **)\n\n";
-
     const samples = theorem.proofTreeBuildResult.val.samples;
+    // Remove root 
+    samples.delete(0);
+
+    if (samples.size === 0) {
+        return debug ? "\n\n(** No samples available. **)" : "";
+    }
+
+    let result = "\n\n";
+    if (debug) {
+        result += "\n\n(** Successfully built proof tree. Successfully augmented " +
+            theorem.stats.augmentedNodesRatio[0] +
+            "/" +
+            theorem.stats.augmentedNodesRatio[1] +
+            " non-trivial nodes (after initial) **)\n\n";
+    }
+
     const sortedSamples = Array.from(samples.entries())
         .filter(([_, result]) => result.ok) // Only include successful results
         .sort(([id1], [id2]) => id1 - id2) // Sort by NodeId
@@ -120,5 +134,11 @@ function aggregateGeneratedSamples(theorem: CoqDatasetTheoremItem): string {
             theoremDatasetSampleToString(result.val as TheoremDatasetSample)
         );
 
-    return result + sortedSamples.join("\n\n") + "\n\n(** End of samples **)";
+    result += sortedSamples.join("\n\n");
+
+    if (debug) {
+        return result + "\n\n(** End of samples **)";
+    }
+
+    return result;
 }

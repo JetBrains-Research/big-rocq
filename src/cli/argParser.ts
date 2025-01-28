@@ -18,7 +18,7 @@ export const bigRocqRunParamsSchema: JSONSchemaType<BigRocqCliArguments> = {
         targetRootPath: { type: "string", nullable: false },
         workspaceRootPath: { type: "string", nullable: false },
         coqLspServerPath: { type: "string", nullable: false },
-        theoremAugmentationTimeout: { type: "number", nullable: false },
+        fileAugmentationTimeout: { type: "number", nullable: false },
         fileTimeout: { type: "number", nullable: false },
         generateDatasetViewer: { type: "boolean", nullable: false },
         generateAugmentedCoqFiles: { type: "boolean", nullable: false },
@@ -31,7 +31,7 @@ export const bigRocqRunParamsSchema: JSONSchemaType<BigRocqCliArguments> = {
         "targetRootPath",
         "workspaceRootPath",
         "coqLspServerPath",
-        "theoremAugmentationTimeout",
+        "fileAugmentationTimeout",
         "fileTimeout",
         "generateDatasetViewer",
         "generateAugmentedCoqFiles",
@@ -57,8 +57,8 @@ export function parseUtilityRunParams(runArgs: BigRocqCliArguments): RunParams {
         coqLspServerPath: validatedArgs.coqLspServerPath,
         targetRootPath: validatedArgs.targetRootPath,
         workspaceRootPath: validatedArgs.workspaceRootPath,
-        theoremValidationTimeoutMillis:
-            validatedArgs.theoremAugmentationTimeout,
+        fileAugmentationTimeoutMillis:
+            validatedArgs.fileAugmentationTimeout,
         fileTypeCheckingTimeoutMillis: validatedArgs.fileTimeout,
         generateDatasetViewer: validatedArgs.generateDatasetViewer,
         generateAugmentedCoqFiles: validatedArgs.generateAugmentedCoqFiles,

@@ -1,18 +1,16 @@
 import { lstatSync, readFileSync, readdirSync } from "fs";
 import * as path from "path";
 import { Err, Ok } from "ts-results";
-import { Position } from "vscode-languageclient";
 
 import { createCoqLspClient } from "../coqLsp/coqLspBuilders";
 import { CoqLspClient, DocumentSpec } from "../coqLsp/coqLspClient";
 
 import {
-    CoqAugmentedTheoremItem,
     CoqDataset,
     CoqDatasetAugmentedFile,
     CoqDatasetFolder,
-    CoqDatasetTheoremItem,
-    NodeAugmentationResult,
+    CoqDatasetUnaugmentedFile,
+    CoqDatasetUnvalidatedTheorem,
 } from "../coqDatasetRepresentation/coqDatasetModels";
 import {
     generateFileViewer,
@@ -20,14 +18,11 @@ import {
 } from "../coqDatasetRepresentation/generateDatasetViewer";
 import {
     accumulateStats,
-    accumulateTheoremStats,
-    createTheoremWithStats,
     emptyDatasetStats,
 } from "../coqDatasetRepresentation/statisticsCalculation";
 import { parseCoqFile } from "../coqParser/parseCoqFile";
 import { buildCoqProofTree } from "../coqProofTree/buildCoqProofTree";
 import { CoqTheoremValidator } from "../coqProofTree/coqTheoremValidator";
-import { augmentTreeToSamples } from "../coqProofTree/proofBuilder";
 import { EventLogger, Severity } from "../logging/eventLogger";
 import Logger from "../logging/logger";
 import { getProgressBar } from "../logging/progressBar";
@@ -168,20 +163,16 @@ export class ProjectProcessor {
         const fileUri = Uri.fromPath(filePath);
         const fileLines = readFileSync(fileUri.fsPath).toString().split("\n");
 
-        const parentDir = path.dirname(filePath);
         const fileName = path.parse(path.basename(filePath)).name;
         const docSpec: DocumentSpec = {
             uri: fileUri,
             version: 1,
         };
-        const theoremValidator = new CoqTheoremValidator(this.coqLspClient);
-        const coqDatasetFileItem: CoqDatasetAugmentedFile = {
+        const coqDatasetUnaugmentedFile: CoqDatasetUnaugmentedFile = {
             filePath: filePath,
             itemName: fileName,
             initialFileContent: fileLines,
-            augmentedTheorems: [],
-            stats: emptyDatasetStats(),
-            type: "file",
+            theoremsWithProofTrees: [],
         };
 
         await this.coqLspClient.withTextDocument(docSpec, async (_) => {
@@ -193,7 +184,7 @@ export class ProjectProcessor {
                 this.eventLogger
             );
 
-            const progress = getProgressBar(fileName, parsedTheorems.length);
+            const progress = getProgressBar("Building proof trees for", fileName, parsedTheorems.length);
 
             this.eventLogger.log(
                 "finished-processing-file",
@@ -220,87 +211,38 @@ export class ProjectProcessor {
                         `Error processing theorem ${theorem.name}: ${proofTree.val.message}`
                     );
 
-                    const theoremItem: CoqDatasetTheoremItem =
-                        createTheoremWithStats(
-                            theorem,
-                            filePath,
-                            Err(new Error(proofTree.val.message))
-                        );
-                    coqDatasetFileItem.augmentedTheorems.push(theoremItem);
-                    coqDatasetFileItem.stats = accumulateTheoremStats(
-                        coqDatasetFileItem.stats,
-                        theoremItem.stats
-                    );
-                } else {
-                    const samples = augmentTreeToSamples(
-                        proofTree.val,
-                        theorem.name
-                    );
-
-                    const theoremStartPos = theorem.statement_range.start;
-                    const contentPrefix = this.getTextBeforePosition(
-                        fileLines,
-                        theoremStartPos
-                    );
-                    const validationResults =
-                        await theoremValidator.validateTheorems(
-                            parentDir,
-                            contentPrefix,
-                            theoremStartPos,
-                            samples,
-                            this.runArgs.theoremValidationTimeoutMillis,
-                            this.runArgs.fileTypeCheckingTimeoutMillis
-                        );
-
-                    const nodeAugmentationRes = new Map<
-                        number,
-                        NodeAugmentationResult
-                    >();
-                    samples.forEach((sample, nodeId) => {
-                        const validationRes = validationResults.get(nodeId);
-                        if (validationRes === undefined) {
-                            throw new Error(
-                                `No validation result for node ${nodeId}`
-                            );
-                        }
-
-                        nodeAugmentationRes.set(
-                            nodeId,
-                            validationRes.isValid
-                                ? Ok(sample)
-                                : Err(new Error(validationRes.diagnostic))
-                        );
-                    });
-
-                    nodeAugmentationRes.forEach((res, nodeId) => {
-                        this.eventLogger.log(
-                            "node-augmentation-result",
-                            `Node ${nodeId} augmentation result: ${res}`
-                        );
-                    });
-
-                    const coqAugmentedTheorem: CoqAugmentedTheoremItem = {
-                        samples: nodeAugmentationRes,
-                        proofTree: proofTree.val,
+                    const theoremItem: CoqDatasetUnvalidatedTheorem = {
+                        parsedTheorem: theorem,
+                        sourceFilePath: filePath,
+                        proofTreeBuildResult: Err(new Error(proofTree.val.message)),
                     };
-
-                    const theoremItem: CoqDatasetTheoremItem =
-                        createTheoremWithStats(
-                            theorem,
-                            filePath,
-                            Ok(coqAugmentedTheorem)
-                        );
-
-                    coqDatasetFileItem.augmentedTheorems.push(theoremItem);
-                    coqDatasetFileItem.stats = accumulateTheoremStats(
-                        coqDatasetFileItem.stats,
-                        theoremItem.stats
+                    coqDatasetUnaugmentedFile.theoremsWithProofTrees.push(theoremItem);
+                } else {
+                    this.eventLogger.log(
+                        "finished-processing-theorem",
+                        `Finished processing theorem ${theorem.name}`
                     );
+
+                    const theoremItem: CoqDatasetUnvalidatedTheorem = {
+                        parsedTheorem: theorem,
+                        sourceFilePath: filePath,
+                        proofTreeBuildResult: Ok(proofTree.val),
+                    };
+                    coqDatasetUnaugmentedFile.theoremsWithProofTrees.push(theoremItem);
                 }
 
                 progress.update();
             }
         });
+
+        const parentDir = path.dirname(filePath);
+        const theoremValidator = new CoqTheoremValidator(this.coqLspClient, this.eventLogger);
+        const coqDatasetFileItem = await theoremValidator.augmentFileWithValidSamples(
+            parentDir,
+            coqDatasetUnaugmentedFile,
+            this.runArgs.fileAugmentationTimeoutMillis,
+            this.runArgs.fileTypeCheckingTimeoutMillis
+        )
 
         if (this.runArgs.generateDatasetViewer) {
             generateFileViewer(
@@ -310,7 +252,11 @@ export class ProjectProcessor {
         }
 
         if (this.runArgs.generateAugmentedCoqFiles) {
-            const augmentedFileLength = generateCoqAugmentedFile(rootPath, coqDatasetFileItem);
+            const augmentedFileLength = generateCoqAugmentedFile(
+                rootPath, 
+                coqDatasetFileItem, 
+                this.runArgs.loggingLevel <= Severity.INFO
+            );
             coqDatasetFileItem.stats.locChangeAfterAugmentation = [
                 fileLines.length,
                 augmentedFileLength,
@@ -318,18 +264,6 @@ export class ProjectProcessor {
         }
 
         return coqDatasetFileItem;
-    }
-
-    private getTextBeforePosition(
-        textLines: string[],
-        position: Position
-    ): string[] {
-        const textPrefix = textLines.slice(0, position.line + 1);
-        textPrefix[position.line] = textPrefix[position.line].slice(
-            0,
-            position.character
-        );
-        return textPrefix;
     }
 
     dispose(): void {

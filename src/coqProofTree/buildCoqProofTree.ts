@@ -13,14 +13,7 @@ import {
 import { unwrapOrThrow } from "../utils/optionWrappers";
 import { Uri } from "../utils/uri";
 
-import { CoqProofTree } from "./coqProofTree";
-
-export class CoqProofTreeBuildingError extends Error {
-    constructor(message: string) {
-        super(message);
-        this.name = "CoqProofTreeError";
-    }
-}
+import { CoqProofTree, CoqProofTreeError } from "./coqProofTree";
 
 async function getStateAtPosOrThrow(
     position: Position,
@@ -35,7 +28,7 @@ async function getStateAtPosOrThrow(
     );
 
     if (goalAfterTactic.err) {
-        throw new CoqProofTreeBuildingError(
+        throw new CoqProofTreeError(
             `Unable to get goal at position (${position.line}, ${position.character})`
         );
     }
@@ -74,7 +67,7 @@ export async function getProofInitialState(
 function throwIfMultipleGoalsOnStart(initialGoals: GoalConfig<PpString>) {
     // TODO: We cannot have multiple goals on start, right?
     if (initialGoals.goals.length !== 1) {
-        throw new CoqProofTreeBuildingError(
+        throw new CoqProofTreeError(
             `Unexpected multiple goals in initial goal in theorem`
         );
     }
@@ -97,7 +90,7 @@ function throwIfUnexpectedVernacType(step: ProofStep) {
         Vernacexpr.VernacPrint,
     ];
     if (!expectedVernacTypes.includes(step.vernac_type)) {
-        throw new CoqProofTreeBuildingError(
+        throw new CoqProofTreeError(
             `Unexpected Vernac type in step: ${step.text}`
         );
     }
@@ -107,15 +100,31 @@ function throwIfHasGoalSelector(step: ProofStep) {
     // TODO: Figire out how to deal with goal selectors
     // https://coq.inria.fr/doc/V8.18.0/refman/proof-engine/ltac.html#goal-selectors
 
-    const goalSelectorRegex = /^(all:|\d+:|(\d+\s*,\s*)*\d+:)/;
+    const goalSelectorRegex = /^(all:|\d+:|(\d+\s*,\s*)*\d+:|\d+\s*-\s*\d+:)/;
     if (goalSelectorRegex.test(step.text.trim())) {
-        throw new CoqProofTreeBuildingError(
+        throw new CoqProofTreeError(
             `Goal selector found in step: ${step.text}`
         );
     }
 }
 
+function throwIfHasZeroTactics(theorem: Theorem) {
+    const tacticVernacTypes = [
+        Vernacexpr.VernacExtend,
+    ];
+    const stateChangeTactics = theorem.proof.proof_steps.filter((step) =>
+        tacticVernacTypes.includes(step.vernac_type)
+    );
+
+    if (stateChangeTactics.length === 0) {
+        throw new CoqProofTreeError(
+            `Theorem has no tactics in proof_steps`
+        );
+    }
+}
+
 export function throwIfCannotProcess(theorem: Theorem) {
+    throwIfHasZeroTactics(theorem);
     theorem.proof.proof_steps.forEach((tactic) => {
         throwIfHasGoalSelector(tactic);
         throwIfUnexpectedVernacType(tactic);
@@ -127,11 +136,11 @@ export async function buildCoqProofTree(
     lspClient: CoqLspClient,
     docUri: Uri,
     docVersion: number
-): Promise<Result<CoqProofTree, CoqProofTreeBuildingError>> {
+): Promise<Result<CoqProofTree, CoqProofTreeError>> {
     try {
         throwIfCannotProcess(theorem);
     } catch (e) {
-        if (e instanceof CoqProofTreeBuildingError) {
+        if (e instanceof CoqProofTreeError) {
             return Err(e);
         }
     }
@@ -158,22 +167,29 @@ export async function buildCoqProofTree(
             break;
         }
 
-        const goalAfterStep = await getStateAfterTactic(
-            step,
-            lspClient,
-            docUri,
-            docVersion
-        );
-
-        if (step.vernac_type === Vernacexpr.VernacExtend) {
-            proofTree.applyToFirstUnsolvedGoal(
+        try {
+            const goalAfterStep = await getStateAfterTactic(
                 step,
-                currentProofState,
-                goalAfterStep
+                lspClient,
+                docUri,
+                docVersion
             );
+
+            if (step.vernac_type === Vernacexpr.VernacExtend) {
+                proofTree.applyToFirstUnsolvedGoal(
+                    step,
+                    currentProofState,
+                    goalAfterStep
+                );
+            }
+
+            currentProofState = goalAfterStep;
+        } catch (e) {
+            if (e instanceof CoqProofTreeError) {
+                return Err(e);
+            }
         }
 
-        currentProofState = goalAfterStep;
     }
 
     return Ok(proofTree);
