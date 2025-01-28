@@ -1,19 +1,33 @@
 import { Mutex } from "async-mutex";
 import { appendFileSync, existsSync, unlinkSync, writeFileSync } from "fs";
 import * as path from "path";
+import { Err, Ok } from "ts-results";
 
 import { CoqLspClient } from "../coqLsp/coqLspClient";
 import { CoqLspError, CoqLspTimeoutError } from "../coqLsp/coqLspTypes";
 
-import { CoqAugmentedTheoremItem, CoqDatasetAugmentedFile, CoqDatasetTheoremItem, CoqDatasetUnaugmentedFile, NodeAugmentationResult, TheoremDatasetSample } from "../coqDatasetRepresentation/coqDatasetModels";
-import { Uri } from "../utils/uri";
-
-import { augmentTreeToSamples, theoremDatasetSampleToString } from "./proofBuilder";
-import { accumulateTheoremStats, createTheoremWithStats, emptyDatasetStats } from "../coqDatasetRepresentation/statisticsCalculation";
-import { getTextInRange } from "../utils/documentUtils";
-import { Err, Ok } from "ts-results";
+import {
+    CoqAugmentedTheoremItem,
+    CoqDatasetAugmentedFile,
+    CoqDatasetTheoremItem,
+    CoqDatasetUnaugmentedFile,
+    NodeAugmentationResult,
+    TheoremDatasetSample,
+} from "../coqDatasetRepresentation/coqDatasetModels";
+import {
+    accumulateTheoremStats,
+    createTheoremWithStats,
+    emptyDatasetStats,
+} from "../coqDatasetRepresentation/statisticsCalculation";
 import { EventLogger } from "../logging/eventLogger";
 import { getProgressBar } from "../logging/progressBar";
+import { getTextInRange } from "../utils/documentUtils";
+import { Uri } from "../utils/uri";
+
+import {
+    augmentTreeToSamples,
+    theoremDatasetSampleToString,
+} from "./proofBuilder";
 
 export interface TheoremValidationResult {
     theorem: TheoremDatasetSample;
@@ -48,15 +62,17 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
         fileTypeCheckingTimeoutMillis: number = 150000
     ): Promise<CoqDatasetAugmentedFile> {
         return await this.mutex.runExclusive(async () => {
-            const timeoutPromise = new Promise<CoqDatasetAugmentedFile>((_, reject) => {
-                setTimeout(() => {
-                    reject(
-                        new CoqLspTimeoutError(
-                            `checkProofs timed out after ${fileAugmentationTimeoutMillis} milliseconds`
-                        )
-                    );
-                }, fileAugmentationTimeoutMillis);
-            });
+            const timeoutPromise = new Promise<CoqDatasetAugmentedFile>(
+                (_, reject) => {
+                    setTimeout(() => {
+                        reject(
+                            new CoqLspTimeoutError(
+                                `checkProofs timed out after ${fileAugmentationTimeoutMillis} milliseconds`
+                            )
+                        );
+                    }, fileAugmentationTimeoutMillis);
+                }
+            );
 
             return Promise.race([
                 this.augmentFileWithValidSamplesUnsafe(
@@ -71,7 +87,7 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
 
     private buildAuxFileUri(
         sourceDirPath: string,
-        initialFileName: string, 
+        initialFileName: string,
         unique: boolean = true
     ): Uri {
         const defaultAuxFileName = `${initialFileName}_augmentation_validation_cp_aux.v`;
@@ -115,10 +131,11 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
             line: fileContent.length - 1,
             character: fileContent[fileContent.length - 1].length,
         };
-    
+
         const firstTheoremStart =
-            unaugmentedFile.theoremsWithProofTrees[0].parsedTheorem.statement_range.start;
-    
+            unaugmentedFile.theoremsWithProofTrees[0].parsedTheorem
+                .statement_range.start;
+
         let validationFileCurPrefix = getTextInRange(
             fileStartPos,
             firstTheoremStart,
@@ -126,9 +143,13 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
             true
         );
         writeFileSync(auxFileUri.fsPath, validationFileCurPrefix);
-        const progress = getProgressBar("Validating new proofs for", unaugmentedFile.itemName, unaugmentedFile.theoremsWithProofTrees.length);
+        const progress = getProgressBar(
+            "Validating new proofs for",
+            unaugmentedFile.itemName,
+            unaugmentedFile.theoremsWithProofTrees.length
+        );
 
-        try { 
+        try {
             await this.coqLspClient.openTextDocument(
                 auxFileUri,
                 undefined,
@@ -136,10 +157,14 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
             );
             let auxFileVersion = 1;
 
-            for (let i = 0; i < unaugmentedFile.theoremsWithProofTrees.length; i++) {
+            for (
+                let i = 0;
+                i < unaugmentedFile.theoremsWithProofTrees.length;
+                i++
+            ) {
                 // 1. Validate samples for current theorem
                 const theorem = unaugmentedFile.theoremsWithProofTrees[i];
-                
+
                 // 1.1. There is no proof-tree, adding empty stats
                 if (theorem.proofTreeBuildResult.err) {
                     const theoremItem: CoqDatasetTheoremItem =
@@ -160,14 +185,17 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
                         theorem.proofTreeBuildResult.val,
                         theorem.parsedTheorem.name
                     );
-                    const validationResults: Map<number, TheoremValidationResult> = new Map();
+                    const validationResults: Map<
+                        number,
+                        TheoremValidationResult
+                    > = new Map();
 
                     for (const [index, theorem] of samples) {
                         auxFileVersion += 1;
                         const appendedText = `\n\n${theoremDatasetSampleToString(theorem)}`;
                         appendFileSync(auxFileUri.fsPath, appendedText);
-        
-                        try { 
+
+                        try {
                             const diagnosticMessage =
                                 await this.coqLspClient.updateTextDocument(
                                     validationFileCurPrefix,
@@ -176,15 +204,18 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
                                     auxFileVersion,
                                     fileTypeCheckingTimeoutMillis
                                 );
-            
+
                             validationResults.set(index, {
                                 theorem,
                                 isValid: diagnosticMessage === undefined,
                                 diagnostic: diagnosticMessage,
                             });
-            
+
                             // 1.3.1. Reset file to the previous state
-                            writeFileSync(auxFileUri.fsPath, validationFileCurPrefix);
+                            writeFileSync(
+                                auxFileUri.fsPath,
+                                validationFileCurPrefix
+                            );
                             auxFileVersion += 1;
                             await this.coqLspClient.updateTextDocument(
                                 validationFileCurPrefix,
@@ -250,7 +281,9 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
                             Ok(coqAugmentedTheorem)
                         );
 
-                    coqDatasetFileItem.augmentedTheorems.push(augmentedTheoremItem);
+                    coqDatasetFileItem.augmentedTheorems.push(
+                        augmentedTheoremItem
+                    );
                     coqDatasetFileItem.stats = accumulateTheoremStats(
                         coqDatasetFileItem.stats,
                         augmentedTheoremItem.stats
@@ -258,9 +291,10 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
                 }
 
                 // 2. Append new content (in-between with the next theorem) to the file
-                const theoremStart = theorem.parsedTheorem.statement_range.start;
+                const theoremStart =
+                    theorem.parsedTheorem.statement_range.start;
                 const theoremEnd = theorem.parsedTheorem.proof.end_pos.end;
-        
+
                 const theoremContent = getTextInRange(
                     theoremStart,
                     theoremEnd,
@@ -269,19 +303,18 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
                 );
                 const nextPoint =
                     i + 1 < unaugmentedFile.theoremsWithProofTrees.length
-                        ? unaugmentedFile.theoremsWithProofTrees[i + 1].parsedTheorem
-                                .statement_range.start
+                        ? unaugmentedFile.theoremsWithProofTrees[i + 1]
+                              .parsedTheorem.statement_range.start
                         : fileEndPos;
-        
+
                 const contentAfterTheorem = getTextInRange(
                     theoremEnd,
                     nextPoint,
                     fileContent,
                     true
                 );
-        
-                validationFileCurPrefix +=
-                    theoremContent + contentAfterTheorem;
+
+                validationFileCurPrefix += theoremContent + contentAfterTheorem;
                 writeFileSync(auxFileUri.fsPath, validationFileCurPrefix);
 
                 auxFileVersion += 1;

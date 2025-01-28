@@ -14,9 +14,9 @@ import {
 const coqAugmentedFilesDir = "tempDatasetView/augmentedFiles";
 
 /**
- * @param rootPath The relative root path of the project being processed 
+ * @param rootPath The relative root path of the project being processed
  * @param coqDatasetFile The processed data from which the augmented file will be generated
- * 
+ *
  * @returns Returns the length of the generated file
  */
 export function generateCoqAugmentedFile(
@@ -32,10 +32,7 @@ export function generateCoqAugmentedFile(
     const fileDir = path.join(coqAugmentedFilesDir, fileSubdir, fileName);
     ensureDirExists(fileDir);
 
-    const augmentedFilePath = path.join(
-        fileDir,
-        `${fileName}_augmented.v`
-    );
+    const augmentedFilePath = path.join(fileDir, `${fileName}_augmented.v`);
     const augmentedFileContent = createCoqAugmentedFile(coqDatasetFile, debug);
 
     writeFileSync(augmentedFilePath, augmentedFileContent);
@@ -107,11 +104,13 @@ function aggregateGeneratedSamples(
     debug: boolean
 ): string {
     if (theorem.proofTreeBuildResult.err) {
-        return debug ? "\n\n(** Error: Proof tree build failed, no samples available. **)" : "";
+        return debug
+            ? "\n\n(** Error: Proof tree build failed, no samples available. **)"
+            : "";
     }
 
     const samples = theorem.proofTreeBuildResult.val.samples;
-    // Remove root 
+    // Remove root
     samples.delete(0);
 
     if (samples.size === 0) {
@@ -120,7 +119,8 @@ function aggregateGeneratedSamples(
 
     let result = "\n\n";
     if (debug) {
-        result += "\n\n(** Successfully built proof tree. Successfully augmented " +
+        result +=
+            "\n\n(** Successfully built proof tree. Successfully augmented " +
             theorem.stats.augmentedNodesRatio[0] +
             "/" +
             theorem.stats.augmentedNodesRatio[1] +

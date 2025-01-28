@@ -109,17 +109,13 @@ function throwIfHasGoalSelector(step: ProofStep) {
 }
 
 function throwIfHasZeroTactics(theorem: Theorem) {
-    const tacticVernacTypes = [
-        Vernacexpr.VernacExtend,
-    ];
+    const tacticVernacTypes = [Vernacexpr.VernacExtend];
     const stateChangeTactics = theorem.proof.proof_steps.filter((step) =>
         tacticVernacTypes.includes(step.vernac_type)
     );
 
     if (stateChangeTactics.length === 0) {
-        throw new CoqProofTreeError(
-            `Theorem has no tactics in proof_steps`
-        );
+        throw new CoqProofTreeError(`Theorem has no tactics in proof_steps`);
     }
 }
 
@@ -189,7 +185,6 @@ export async function buildCoqProofTree(
                 return Err(e);
             }
         }
-
     }
 
     return Ok(proofTree);

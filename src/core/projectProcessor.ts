@@ -12,6 +12,7 @@ import {
     CoqDatasetUnaugmentedFile,
     CoqDatasetUnvalidatedTheorem,
 } from "../coqDatasetRepresentation/coqDatasetModels";
+import { generateCoqAugmentedFile } from "../coqDatasetRepresentation/generateCoqAugmentedFile";
 import {
     generateFileViewer,
     generateFolderViewer,
@@ -29,7 +30,6 @@ import { getProgressBar } from "../logging/progressBar";
 import { Uri } from "../utils/uri";
 
 import { RunParams } from "./utilityRunParams";
-import { generateCoqAugmentedFile } from "../coqDatasetRepresentation/generateCoqAugmentedFile";
 
 export class ProjectProcessor {
     private constructor(
@@ -116,12 +116,12 @@ export class ProjectProcessor {
                 if (item.isDirectory()) {
                     await this.processDir(
                         rootPath,
-                        `${accumulatedPath}/${item.name}`,
+                        `${accumulatedPath}/${item.name}`
                     );
                 } else if (item.isFile() && item.name.endsWith(".v")) {
                     const datasetItem = await this.processFile(
                         rootPath,
-                        `${accumulatedPath}/${item.name}`,
+                        `${accumulatedPath}/${item.name}`
                     );
 
                     datasetFolderItem.dirItems.push(datasetItem);
@@ -150,7 +150,7 @@ export class ProjectProcessor {
     // TODO: Refactor
     private async processFile(
         rootPathRelative: string,
-        filePathRelative: string,
+        filePathRelative: string
     ): Promise<CoqDatasetAugmentedFile> {
         const rootPath = path.resolve(rootPathRelative);
         const filePath = path.resolve(filePathRelative);
@@ -184,7 +184,11 @@ export class ProjectProcessor {
                 this.eventLogger
             );
 
-            const progress = getProgressBar("Building proof trees for", fileName, parsedTheorems.length);
+            const progress = getProgressBar(
+                "Building proof trees for",
+                fileName,
+                parsedTheorems.length
+            );
 
             this.eventLogger.log(
                 "finished-processing-file",
@@ -214,9 +218,13 @@ export class ProjectProcessor {
                     const theoremItem: CoqDatasetUnvalidatedTheorem = {
                         parsedTheorem: theorem,
                         sourceFilePath: filePath,
-                        proofTreeBuildResult: Err(new Error(proofTree.val.message)),
+                        proofTreeBuildResult: Err(
+                            new Error(proofTree.val.message)
+                        ),
                     };
-                    coqDatasetUnaugmentedFile.theoremsWithProofTrees.push(theoremItem);
+                    coqDatasetUnaugmentedFile.theoremsWithProofTrees.push(
+                        theoremItem
+                    );
                 } else {
                     this.eventLogger.log(
                         "finished-processing-theorem",
@@ -228,7 +236,9 @@ export class ProjectProcessor {
                         sourceFilePath: filePath,
                         proofTreeBuildResult: Ok(proofTree.val),
                     };
-                    coqDatasetUnaugmentedFile.theoremsWithProofTrees.push(theoremItem);
+                    coqDatasetUnaugmentedFile.theoremsWithProofTrees.push(
+                        theoremItem
+                    );
                 }
 
                 progress.update();
@@ -236,31 +246,32 @@ export class ProjectProcessor {
         });
 
         const parentDir = path.dirname(filePath);
-        const theoremValidator = new CoqTheoremValidator(this.coqLspClient, this.eventLogger);
-        const coqDatasetFileItem = await theoremValidator.augmentFileWithValidSamples(
-            parentDir,
-            coqDatasetUnaugmentedFile,
-            this.runArgs.fileAugmentationTimeoutMillis,
-            this.runArgs.fileTypeCheckingTimeoutMillis
-        )
+        const theoremValidator = new CoqTheoremValidator(
+            this.coqLspClient,
+            this.eventLogger
+        );
+        const coqDatasetFileItem =
+            await theoremValidator.augmentFileWithValidSamples(
+                parentDir,
+                coqDatasetUnaugmentedFile,
+                this.runArgs.fileAugmentationTimeoutMillis,
+                this.runArgs.fileTypeCheckingTimeoutMillis
+            );
 
         if (this.runArgs.generateDatasetViewer) {
-            generateFileViewer(
-                rootPath,
-                coqDatasetFileItem,
-            );
+            generateFileViewer(rootPath, coqDatasetFileItem);
         }
 
         if (this.runArgs.generateAugmentedCoqFiles) {
             const augmentedFileLength = generateCoqAugmentedFile(
-                rootPath, 
-                coqDatasetFileItem, 
+                rootPath,
+                coqDatasetFileItem,
                 this.runArgs.loggingLevel <= Severity.INFO
             );
             coqDatasetFileItem.stats.locChangeAfterAugmentation = [
                 fileLines.length,
                 augmentedFileLength,
-            ]
+            ];
         }
 
         return coqDatasetFileItem;

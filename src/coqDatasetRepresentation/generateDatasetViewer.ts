@@ -8,6 +8,7 @@ import {
     CoqDatasetFolder,
     CoqDatasetStats,
 } from "../coqDatasetRepresentation/coqDatasetModels";
+import { ensureDirExists } from "../utils/documentUtils";
 
 import { folderViewHtml } from "./datasetVisualization/templates/dirView";
 import { proofTreeViewHtml } from "./datasetVisualization/templates/proofTree";
@@ -16,7 +17,6 @@ import {
     theoremListViewHtml,
 } from "./datasetVisualization/templates/theoremList";
 import { compactSerializeCoqTheorem } from "./serialization/coqDatasetCompactSerialization";
-import { ensureDirExists } from "../utils/documentUtils";
 
 // TODO: Move to params
 export const coqDataViewDir = "tempDatasetView";
@@ -51,7 +51,12 @@ export function generateFolderViewer(
     const items = datasetFolder.dirItems.map(viewFromDatasetItem);
 
     const dirIndexHtmlPath = path.join(workingDir, `${dirIndexHtmlName}.html`);
-    const htmlTemplate = folderViewHtml(folderName, items, datasetFolder.stats, rootPath !== curDirPath);
+    const htmlTemplate = folderViewHtml(
+        folderName,
+        items,
+        datasetFolder.stats,
+        rootPath !== curDirPath
+    );
 
     fs.writeFileSync(dirIndexHtmlPath, htmlTemplate);
 }
@@ -67,7 +72,7 @@ function viewFromDatasetItem(dirItem: CoqDatasetDirItem): DirectoryItemView {
 
 export function generateFileViewer(
     rootPath: string,
-    coqDatasetFile: CoqDatasetAugmentedFile,
+    coqDatasetFile: CoqDatasetAugmentedFile
 ): void {
     ensureDirExists(coqDataViewDir);
 

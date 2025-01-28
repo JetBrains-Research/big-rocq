@@ -1,5 +1,5 @@
-import { Position } from "vscode-languageclient";
 import * as fs from "fs";
+import { Position } from "vscode-languageclient";
 
 export function ensureDirExists(dir: string): void {
     if (!fs.existsSync(dir)) {

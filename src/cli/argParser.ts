@@ -57,8 +57,7 @@ export function parseUtilityRunParams(runArgs: BigRocqCliArguments): RunParams {
         coqLspServerPath: validatedArgs.coqLspServerPath,
         targetRootPath: validatedArgs.targetRootPath,
         workspaceRootPath: validatedArgs.workspaceRootPath,
-        fileAugmentationTimeoutMillis:
-            validatedArgs.fileAugmentationTimeout,
+        fileAugmentationTimeoutMillis: validatedArgs.fileAugmentationTimeout,
         fileTypeCheckingTimeoutMillis: validatedArgs.fileTimeout,
         generateDatasetViewer: validatedArgs.generateDatasetViewer,
         generateAugmentedCoqFiles: validatedArgs.generateAugmentedCoqFiles,

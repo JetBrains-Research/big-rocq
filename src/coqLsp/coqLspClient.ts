@@ -386,7 +386,9 @@ export class CoqLspClientImpl implements CoqLspClient {
         timeoutMillis: number = 900000
     ): Promise<DiagnosticMessage> {
         const updatedText = oldDocumentText + appendedSuffix;
-        const oldEndPosition = this.getTextEndPosition(oldDocumentText.split("\n"));
+        const oldEndPosition = this.getTextEndPosition(
+            oldDocumentText.split("\n")
+        );
 
         const params: DidChangeTextDocumentParams = {
             textDocument: {
