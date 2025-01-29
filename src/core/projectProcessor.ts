@@ -114,9 +114,15 @@ export class ProjectProcessor {
 
             for (const item of dirItems) {
                 if (item.isDirectory()) {
-                    await this.processDir(
+                    const dirItem = await this.processDir(
                         rootPath,
                         `${accumulatedPath}/${item.name}`
+                    );
+
+                    datasetFolderItem.dirItems.push(dirItem);
+                    datasetFolderItem.stats = accumulateStats(
+                        datasetFolderItem.stats,
+                        dirItem.stats
                     );
                 } else if (item.isFile() && item.name.endsWith(".v")) {
                     const datasetItem = await this.processFile(
