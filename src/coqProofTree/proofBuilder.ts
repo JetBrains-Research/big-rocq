@@ -6,6 +6,7 @@ import { TheoremDatasetSample } from "../coqDatasetRepresentation/coqDatasetMode
 import { ProofStep } from "../coqParser/parsedTypes";
 
 import { CoqProofTree } from "./coqProofTree";
+import { HypothesesDict } from "./coqTheoremValidator";
 
 export function theoremDatasetSampleToString(
     sample: TheoremDatasetSample
@@ -20,27 +21,47 @@ function hypToString(hyp: Hyp<PpString>): string {
 function goalToTheoremStatement(
     proofGoal: Goal<PpString>,
     currentTheoremName: string,
-    predefinedIndex: number
+    predefinedIndex: number,
+    skippedHyps: HypothesesDict
 ): string {
     const auxTheoremConcl = proofGoal?.ty;
-    const theoremIndeces = proofGoal?.hyps
+    const theoremIndeces = removeSkippedHypotheses(proofGoal.hyps, skippedHyps)
         .map((hyp) => `(${hypToString(hyp)})`)
         .join(" ");
 
-    let name = `${currentTheoremName}_helper_${predefinedIndex}`;
+    let name = `${currentTheoremName}_br_helper_${predefinedIndex}`;
     return `Theorem ${name} ${theoremIndeces} :\n   ${auxTheoremConcl}.`;
+}
+
+function removeSkippedHypotheses(
+    theoremHyps: Hyp<PpString>[],
+    skippedHyps: HypothesesDict
+): Hyp<PpString>[] {
+    const newHyps: Hyp<PpString>[] = [];
+    for (const hyp of theoremHyps) {
+        const filteredNames = hyp.names.filter(
+            (name) => skippedHyps.get(name as string) === undefined
+        );
+        if (filteredNames.length > 0) {
+            newHyps.push({ names: filteredNames, ty: hyp.ty });
+        }
+    }
+
+    return newHyps;
 }
 
 export function constructTheoremWithProof(
     proofState: Goal<PpString>,
     proofSteps: ProofStep[],
     currentTheoremName: string,
-    predefinedIndex: number
+    predefinedIndex: number,
+    skippedHyps: HypothesesDict
 ): TheoremDatasetSample {
     const theoremStatement = goalToTheoremStatement(
         proofState,
         currentTheoremName,
-        predefinedIndex
+        predefinedIndex,
+        skippedHyps
     );
     const proof = proofSteps.map((step) => step.text).join("\n");
     return { theoremStatement, proof, proofLength: proofSteps.length };
@@ -48,7 +69,8 @@ export function constructTheoremWithProof(
 
 export function augmentTreeToSamples(
     coqProofTree: CoqProofTree,
-    currentTheoremName: string
+    currentTheoremName: string,
+    skippedHyps: HypothesesDict
 ): Map<number, TheoremDatasetSample> {
     const nodes = coqProofTree.dfs();
 
@@ -60,7 +82,8 @@ export function augmentTreeToSamples(
                 node.proofState,
                 node.collectSubtreeEdges(),
                 currentTheoremName,
-                node.index
+                node.index,
+                skippedHyps
             );
             samples.set(node.index, sample);
         } else {

@@ -256,31 +256,54 @@ export class ProjectProcessor {
             this.coqLspClient,
             this.eventLogger
         );
-        const coqDatasetFileItem =
-            await theoremValidator.augmentFileWithValidSamples(
-                parentDir,
-                coqDatasetUnaugmentedFile,
-                this.runArgs.fileAugmentationTimeoutMillis,
-                this.runArgs.fileTypeCheckingTimeoutMillis
-            );
 
-        if (this.runArgs.generateDatasetViewer) {
-            generateFileViewer(rootPath, coqDatasetFileItem);
+        try {
+            const coqDatasetFileItem =
+                await theoremValidator.augmentFileWithValidSamples(
+                    parentDir,
+                    coqDatasetUnaugmentedFile,
+                    this.runArgs.fileAugmentationTimeoutMillis,
+                    this.runArgs.fileTypeCheckingTimeoutMillis
+                );
+
+            if (this.runArgs.generateDatasetViewer) {
+                generateFileViewer(rootPath, coqDatasetFileItem);
+            }
+
+            if (this.runArgs.generateAugmentedCoqFiles) {
+                const augmentedFileLength = generateCoqAugmentedFile(
+                    rootPath,
+                    coqDatasetFileItem,
+                    this.runArgs.loggingLevel <= Severity.INFO
+                );
+                coqDatasetFileItem.stats.locChangeAfterAugmentation = [
+                    fileLines.length,
+                    augmentedFileLength,
+                ];
+            }
+
+            return coqDatasetFileItem;
+        } catch (e) {
+            if (e instanceof Error) {
+                this.eventLogger.log(
+                    "error-processing-file",
+                    `Error processing file ${filePath}: ${e.message}`,
+                    null,
+                    Severity.ERROR
+                );
+
+                let coqDatasetFileItem: CoqDatasetAugmentedFile = {
+                    ...coqDatasetUnaugmentedFile,
+                    augmentedTheorems: [],
+                    stats: emptyDatasetStats(),
+                    type: "file",
+                };
+
+                return coqDatasetFileItem;
+            }
         }
 
-        if (this.runArgs.generateAugmentedCoqFiles) {
-            const augmentedFileLength = generateCoqAugmentedFile(
-                rootPath,
-                coqDatasetFileItem,
-                this.runArgs.loggingLevel <= Severity.INFO
-            );
-            coqDatasetFileItem.stats.locChangeAfterAugmentation = [
-                fileLines.length,
-                augmentedFileLength,
-            ];
-        }
-
-        return coqDatasetFileItem;
+        throw new Error("Unreachable code");
     }
 
     dispose(): void {

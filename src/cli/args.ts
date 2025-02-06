@@ -30,7 +30,7 @@ export const args = parse<BigRocqCliArguments>(
         fileAugmentationTimeout: {
             type: Number,
             alias: "t",
-            defaultValue: 1000000,
+            defaultValue: 9000000,
             description:
                 "Every produced sample is checked manually to be correctly compiling/type-checking. This timeout means how much time you give the util to check all new samples for a single theorem.",
         },
