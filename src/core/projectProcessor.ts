@@ -253,7 +253,8 @@ export class ProjectProcessor {
 
         const parentDir = path.dirname(filePath);
         const theoremValidator = new CoqTheoremValidator(
-            this.coqLspClient,
+            this.abortController,
+            this.runArgs,
             this.eventLogger
         );
 
