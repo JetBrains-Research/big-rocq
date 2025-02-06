@@ -1,10 +1,10 @@
 {
   "name": "big-rocq",
-  "displayName": "Coq Data Augmentation",
-  "description": "This utility takes a Coq project as input and uses some domain knowladge to increase a number of theorems in the dataset by a significant factor.",
+  "displayName": "BigRocq",
+  "description": "This utility takes a Rocq project as input and uses some domain knowladge to increase a number of theorems in the dataset by a significant factor.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/K-dizzled/coq-data-augmentation.git"
+    "url": "https://github.com/JetBrains-Research/big-rocq"
   },
   "bin": {
     "big-rocq": "./out/utilityRunner.js"

@@ -4,6 +4,7 @@ import { appendFileSync, existsSync, unlinkSync, writeFileSync } from "fs";
 import * as path from "path";
 import { Err, Ok } from "ts-results";
 
+import { createCoqLspClient } from "../coqLsp/coqLspBuilders";
 import { CoqLspClient } from "../coqLsp/coqLspClient";
 import {
     CoqLspError,
@@ -26,6 +27,7 @@ import {
     createTheoremWithStats,
     emptyDatasetStats,
 } from "../coqDatasetRepresentation/statisticsCalculation";
+import { RunParams } from "../core/utilityRunParams";
 import { EventLogger } from "../logging/eventLogger";
 import { getProgressBar } from "../logging/progressBar";
 import { getTextInRange } from "../utils/documentUtils";
@@ -35,8 +37,6 @@ import {
     augmentTreeToSamples,
     theoremDatasetSampleToString,
 } from "./proofBuilder";
-import { RunParams } from "../core/utilityRunParams";
-import { createCoqLspClient } from "../coqLsp/coqLspBuilders";
 
 export interface TheoremValidationResult {
     theorem: TheoremDatasetSample;
@@ -315,14 +315,13 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
             appendFileSync(auxFileUri.fsPath, appendedText);
 
             try {
-                const diagnosticMessage =
-                    await coqLspClient.updateTextDocument(
-                        validationFileCurPrefix,
-                        appendedText,
-                        auxFileUri,
-                        auxFileVersion,
-                        fileTypeCheckingTimeoutMillis
-                    );
+                const diagnosticMessage = await coqLspClient.updateTextDocument(
+                    validationFileCurPrefix,
+                    appendedText,
+                    auxFileUri,
+                    auxFileVersion,
+                    fileTypeCheckingTimeoutMillis
+                );
 
                 validationResults.set(index, {
                     theorem,
