@@ -140,7 +140,7 @@ export const folderViewHtml = (
                 Augmented Nodes<br><span>${aggregatedStats.augmentedNodesRatio[0]} / ${aggregatedStats.augmentedNodesRatio[1]}</span>
             </div>
             <div class="stat">
-                Avarage new proof length<br><span>${computeAverageProofLength(aggregatedStats)} tactics</span>
+                Average new proof length<br><span>${computeAverageProofLength(aggregatedStats)} tactics</span>
             </div>
             <div class="stat">
                 LOC after augmentation<br><span> ${aggregatedStats.locChangeAfterAugmentation[0] === 0 ? "Not available" : `${aggregatedStats.locChangeAfterAugmentation[0]} ➡️ ${aggregatedStats.locChangeAfterAugmentation[1]}`}</span>
