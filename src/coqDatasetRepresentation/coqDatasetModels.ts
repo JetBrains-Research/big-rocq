@@ -60,6 +60,7 @@ export interface CoqDatasetFolder {
 export interface CoqDatasetStats extends CoqTheoremStats {
     // Lines of code before and after augmentation
     locChangeAfterAugmentation: [number, number];
+    processingTimeMillis: number;
 }
 
 export interface CoqTheoremStats {

@@ -64,6 +64,7 @@ export function accumulateTheoremStats(
             datasetStats.augmentedProofLengthCounts
         ),
         locChangeAfterAugmentation: datasetStats.locChangeAfterAugmentation,
+        processingTimeMillis: datasetStats.processingTimeMillis,
     };
 }
 
@@ -88,6 +89,7 @@ export function accumulateStats(
             stats1.locChangeAfterAugmentation,
             stats2.locChangeAfterAugmentation
         ),
+        processingTimeMillis: stats1.processingTimeMillis + stats2.processingTimeMillis,
     };
 }
 
@@ -115,6 +117,7 @@ export function emptyDatasetStats(): CoqDatasetStats {
         proofTreeBuildRatio: emptyRatio,
         augmentedProofLengthCounts: new Map(),
         locChangeAfterAugmentation: [0, 0],
+        processingTimeMillis: 0,
     };
 }
 

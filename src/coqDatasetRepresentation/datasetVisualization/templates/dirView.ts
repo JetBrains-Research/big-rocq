@@ -145,6 +145,9 @@ export const folderViewHtml = (
             <div class="stat">
                 LOC after augmentation<br><span> ${aggregatedStats.locChangeAfterAugmentation[0] === 0 ? "Not available" : `${aggregatedStats.locChangeAfterAugmentation[0]} ➡️ ${aggregatedStats.locChangeAfterAugmentation[1]}`}</span>
             </div>
+            <div class="stat">
+                Elapsed time<br><span> ${Math.round(aggregatedStats.processingTimeMillis / 1000) + "s"}</span>
+            </div>
         </div>
         <ul>
             ${dirItems

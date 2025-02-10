@@ -30,6 +30,7 @@ import { getProgressBar } from "../logging/progressBar";
 import { Uri } from "../utils/uri";
 
 import { RunParams } from "./utilityRunParams";
+import { TimeMark } from "../coqProofTree/measureTimeUtils";
 
 export class ProjectProcessor {
     private constructor(
@@ -160,6 +161,7 @@ export class ProjectProcessor {
     ): Promise<CoqDatasetAugmentedFile> {
         const rootPath = path.resolve(rootPathRelative);
         const filePath = path.resolve(filePathRelative);
+        const timeMark = new TimeMark();
 
         this.eventLogger.log(
             "started-processing-file",
@@ -281,6 +283,7 @@ export class ProjectProcessor {
                     fileLines.length,
                     augmentedFileLength,
                 ];
+                coqDatasetFileItem.stats.processingTimeMillis = timeMark.measureElapsedMillis();
             }
 
             return coqDatasetFileItem;
