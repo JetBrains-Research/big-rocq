@@ -64,6 +64,16 @@ async function parseFlecheDocument(
     extractTheoremInitialGoal: boolean,
     eventLogger?: EventLogger
 ): Promise<Theorem[]> {
+    // If text contains Set Default Goal Selector 
+    // then the parsing of goal selectors will be incorrect
+    // throw an error in this case
+    // TODO: Probably figure out a way to work with this
+    if (textLines.some((line) => line.includes("Set Default Goal Selector"))) {
+        throw new CoqParsingError(
+            "Set Default Goal Selector is not supported in the parser"
+        );
+    }
+
     if (doc === null) {
         throw Error("could not parse file");
     }
