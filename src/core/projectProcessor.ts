@@ -24,13 +24,13 @@ import {
 import { parseCoqFile } from "../coqParser/parseCoqFile";
 import { buildCoqProofTree } from "../coqProofTree/buildCoqProofTree";
 import { CoqTheoremValidator } from "../coqProofTree/coqTheoremValidator";
+import { TimeMark } from "../coqProofTree/measureTimeUtils";
 import { EventLogger, Severity } from "../logging/eventLogger";
 import Logger from "../logging/logger";
 import { getProgressBar } from "../logging/progressBar";
 import { Uri } from "../utils/uri";
 
 import { RunParams } from "./utilityRunParams";
-import { TimeMark } from "../coqProofTree/measureTimeUtils";
 
 export class ProjectProcessor {
     private constructor(
@@ -283,7 +283,8 @@ export class ProjectProcessor {
                     fileLines.length,
                     augmentedFileLength,
                 ];
-                coqDatasetFileItem.stats.processingTimeMillis = timeMark.measureElapsedMillis();
+                coqDatasetFileItem.stats.processingTimeMillis =
+                    timeMark.measureElapsedMillis();
             }
 
             return coqDatasetFileItem;

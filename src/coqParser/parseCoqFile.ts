@@ -1,3 +1,4 @@
+import * as assert from "assert";
 import { readFileSync } from "fs";
 import { Range } from "vscode-languageclient";
 
@@ -15,6 +16,7 @@ import { throwOnAbort } from "../utils/abortUtils";
 import { getTextInRange } from "../utils/documentUtils";
 import { Uri } from "../utils/uri";
 
+import { AllGoals, GoalList, GoalSelector, SingleGoal } from "./goalSelectors";
 import { ProofStep, Theorem, TheoremProof, Vernacexpr } from "./parsedTypes";
 
 /**
@@ -198,6 +200,116 @@ function getProofEndCommand(expr: { [key: string]: any }): string | null {
     }
 }
 
+function getGoalSelector(expr: any): GoalSelector | undefined {
+    try {
+        if (hasParallelExecSelector(expr)) {
+            return GoalSelector.AllGoals();
+        }
+
+        const goalSelectorItem = expr[2][0][2];
+        if (goalSelectorItem.length === 0) {
+            return undefined;
+        }
+
+        const goalSelector = goalSelectorItem[0];
+        if (goalSelector === AllGoals.type) {
+            return GoalSelector.AllGoals();
+        }
+
+        assert(
+            goalSelectorItem.length === 1,
+            "Expected to have only one goal selector in a tactic, what the hell"
+        );
+
+        const selectorType = goalSelector[0];
+
+        switch (selectorType) {
+            case SingleGoal.type:
+                const goalIndex = goalSelector[1];
+                return GoalSelector.SingleGoal(parseInt(goalIndex));
+            case GoalList.type:
+                // Lists and ranges are represented in the same way
+                const rangesOfGoals = mapGoalIndecesToNumbers(goalSelector[1]);
+                const listsOfGoals = rangesOfGoals.map((range) => {
+                    assert(
+                        range.length === 2,
+                        "Expected to have a range of two numbers"
+                    );
+                    return accRange(range[0], range[1]);
+                });
+                const mergedGoals = mergeGoalSelectorLists(listsOfGoals);
+                return GoalSelector.GoalList(mergedGoals);
+            default:
+                return undefined;
+        }
+    } catch (error) {
+        return undefined;
+    }
+}
+
+/**
+ * "par:" selector is semantically equivalent to "all:" selector
+ * but represented differently in the Fleche Document.
+ * https://coq.inria.fr/doc/V8.18.0/refman/proof-engine/ltac.html#goal-selectors
+ */
+function hasParallelExecSelector(expr: any): boolean {
+    try {
+        if (expr[1]["ext_entry"] === "VernacSolveParallel") {
+            return true;
+        } else {
+            return false;
+        }
+    } catch (error) {
+        return false;
+    }
+}
+
+/**
+ * Input should correctly resolve as an array of arrays of string,
+ * where each string is a number. Throws an error if the input is invalid.
+ *
+ * Example:
+ * [
+ *  [
+ *      "1",
+ *      "1"
+ *  ],
+ *  [
+ *      "2",
+ *      "3"
+ *  ]
+ * ]
+ */
+function mapGoalIndecesToNumbers(goalIndeces: any): number[][] {
+    return goalIndeces.map((el: any) => {
+        return el.map((el: any) => {
+            return parseInt(el);
+        });
+    });
+}
+
+function accRange(from: number, to: number): number[] {
+    if (from === to) {
+        return [from];
+    }
+
+    const result = [];
+    for (let i = from; i <= to; i++) {
+        result.push(i);
+    }
+    return result;
+}
+
+function mergeGoalSelectorLists(ranges: number[][]): number[] {
+    const result = new Set<number>();
+    for (const range of ranges) {
+        for (const el of range) {
+            result.add(el);
+        }
+    }
+    return Array.from(result);
+}
+
 function checkIfExprEAdmit(expr: any): boolean {
     try {
         return getProofEndCommand(expr) === "Admitted";
@@ -253,7 +365,12 @@ function parseProof(
                 span.range.end,
                 lines
             );
-            const proofStep = new ProofStep(proofText, vernacType, span.range);
+            const proofStep = new ProofStep(
+                proofText,
+                vernacType,
+                span.range,
+                getGoalSelector(getExpr(span))
+            );
 
             proof.push(proofStep);
             index += 1;

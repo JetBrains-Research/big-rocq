@@ -89,7 +89,8 @@ export function accumulateStats(
             stats1.locChangeAfterAugmentation,
             stats2.locChangeAfterAugmentation
         ),
-        processingTimeMillis: stats1.processingTimeMillis + stats2.processingTimeMillis,
+        processingTimeMillis:
+            stats1.processingTimeMillis + stats2.processingTimeMillis,
     };
 }
 

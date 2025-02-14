@@ -3,6 +3,8 @@ import { Range } from "vscode-languageclient";
 
 import { Goal, PpString } from "../coqLsp/coqLspTypes";
 
+import { GoalSelector } from "./goalSelectors";
+
 export enum Vernacexpr {
     VernacLoad = "VernacLoad",
     VernacSyntaxExtension = "VernacSyntaxExtension",
@@ -101,11 +103,16 @@ export class ProofStep {
     constructor(
         public text: string,
         public vernac_type: Vernacexpr,
-        public range: Range
+        public range: Range,
+        public goalSelector?: GoalSelector
     ) {}
 
     public toString(): string {
         return this.text;
+    }
+
+    get hasGoalSelector(): boolean {
+        return this.goalSelector !== undefined;
     }
 }
 
