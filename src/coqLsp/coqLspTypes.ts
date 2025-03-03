@@ -5,6 +5,7 @@ import {
     TextDocumentIdentifier,
     VersionedTextDocumentIdentifier,
 } from "vscode-languageclient";
+import { stringifyAnyValue } from "../utils/printers";
 
 export type ProofGoal = Goal<PpString>;
 
@@ -25,6 +26,36 @@ export interface GoalConfig<Pp> {
     bullet?: Pp;
     shelf: Goal<Pp>[];
     given_up: Goal<Pp>[];
+}
+
+export function compareGoalConfigs<Pp>(
+    a: GoalConfig<Pp>,
+    b: GoalConfig<Pp>
+): boolean {
+    if (a.goals.length !== b.goals.length) {
+        return false;
+    }
+    for (let i = 0; i < a.goals.length; i++) {
+        if (!compareGoals(a.goals[i], b.goals[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function compareGoals<Pp>(a: Goal<Pp>, b: Goal<Pp>): boolean {
+    if (a.ty !== b.ty) {
+        return false;
+    }
+    if (a.hyps.length !== b.hyps.length) {
+        return false;
+    }
+    for (let i = 0; i < a.hyps.length; i++) {
+        if (stringifyAnyValue(a.hyps[i]) !== stringifyAnyValue(b.hyps[i])) {
+            return false;
+        }
+    }
+    return true;
 }
 
 export interface Message<Pp> {

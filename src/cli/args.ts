@@ -8,6 +8,7 @@ export interface BigRocqCliArguments {
     fileTimeout: number;
     generateDatasetViewer: boolean;
     generateAugmentedCoqFiles: boolean;
+    skipZeroProgressTactics: boolean;
 
     version?: boolean;
     verbose?: boolean;
@@ -65,6 +66,12 @@ export const args = parse<BigRocqCliArguments>(
             defaultValue: true,
             description:
                 "Whether to generate the augmented Coq files which will contain all augmented samples in the place of initial theorems.",
+        },
+        skipZeroProgressTactics: {
+            type: Boolean,
+            defaultValue: false,
+            description:
+                "If set, the utility will skip tactics that do not change the state of the proof during augmentation. Meining, if in the original proof there was a part `simpl. simpl. reflexivity.`, only the first one will result in a new sample, the proof state does not change after the second `simpl`.",
         },
         version: { type: Boolean, optional: true, alias: "v" },
         verbose: { type: Boolean, optional: true },

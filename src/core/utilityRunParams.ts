@@ -9,4 +9,5 @@ export interface RunParams {
     fileTypeCheckingTimeoutMillis: number;
     generateDatasetViewer: boolean;
     generateAugmentedCoqFiles: boolean;
+    skipZeroProgressTactics: boolean;
 }

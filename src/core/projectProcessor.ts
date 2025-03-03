@@ -215,7 +215,8 @@ export class ProjectProcessor {
                     theorem,
                     this.coqLspClient,
                     fileUri,
-                    1
+                    1,
+                    this.runArgs.skipZeroProgressTactics,
                 );
                 if (proofTree.err) {
                     this.eventLogger.log(

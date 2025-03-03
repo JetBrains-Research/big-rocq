@@ -22,6 +22,7 @@ export const bigRocqRunParamsSchema: JSONSchemaType<BigRocqCliArguments> = {
         fileTimeout: { type: "number", nullable: false },
         generateDatasetViewer: { type: "boolean", nullable: false },
         generateAugmentedCoqFiles: { type: "boolean", nullable: false },
+        skipZeroProgressTactics: { type: "boolean", nullable: false },
         version: { type: "boolean", nullable: true },
         verbose: { type: "boolean", nullable: true },
         debug: { type: "boolean", nullable: true },
@@ -35,6 +36,7 @@ export const bigRocqRunParamsSchema: JSONSchemaType<BigRocqCliArguments> = {
         "fileTimeout",
         "generateDatasetViewer",
         "generateAugmentedCoqFiles",
+        "skipZeroProgressTactics",
     ],
     additionalProperties: false,
 };
@@ -61,6 +63,7 @@ export function parseUtilityRunParams(runArgs: BigRocqCliArguments): RunParams {
         fileTypeCheckingTimeoutMillis: validatedArgs.fileTimeout,
         generateDatasetViewer: validatedArgs.generateDatasetViewer,
         generateAugmentedCoqFiles: validatedArgs.generateAugmentedCoqFiles,
+        skipZeroProgressTactics: validatedArgs.skipZeroProgressTactics
     };
 }
 

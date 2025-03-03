@@ -2,7 +2,7 @@ import { Err, Ok, Result } from "ts-results";
 import { Position } from "vscode-languageclient";
 
 import { CoqLspClient } from "../coqLsp/coqLspClient";
-import { GoalConfig, PpString } from "../coqLsp/coqLspTypes";
+import { compareGoalConfigs, GoalConfig, PpString } from "../coqLsp/coqLspTypes";
 
 import {
     ProofStep,
@@ -99,9 +99,7 @@ function throwIfUnexpectedVernacType(step: ProofStep) {
 function throwIfHasGoalSelector(step: ProofStep) {
     // TODO: Figire out how to deal with goal selectors
     // https://coq.inria.fr/doc/V8.18.0/refman/proof-engine/ltac.html#goal-selectors
-
-    const goalSelectorRegex = /^(all:|\d+:|(\d+\s*,\s*)*\d+:|\d+\s*-\s*\d+:)/;
-    if (goalSelectorRegex.test(step.text.trim())) {
+    if (step.hasGoalSelector) {
         throw new CoqProofTreeError(
             `Goal selector found in step: ${step.text}`
         );
@@ -131,7 +129,8 @@ export async function buildCoqProofTree(
     theorem: Theorem,
     lspClient: CoqLspClient,
     docUri: Uri,
-    docVersion: number
+    docVersion: number,
+    skipZeroProgressTactics: boolean
 ): Promise<Result<CoqProofTree, CoqProofTreeError>> {
     try {
         throwIfCannotProcess(theorem);
@@ -172,11 +171,15 @@ export async function buildCoqProofTree(
             );
 
             if (step.vernac_type === Vernacexpr.VernacExtend) {
-                proofTree.applyToFirstUnsolvedGoal(
-                    step,
-                    currentProofState,
-                    goalAfterStep
-                );
+                if (skipZeroProgressTactics && compareGoalConfigs(currentProofState, goalAfterStep)) {
+                    // skip 
+                } else {
+                    proofTree.applyToFirstUnsolvedGoal(
+                        step,
+                        currentProofState,
+                        goalAfterStep
+                    );
+                }
             }
 
             currentProofState = goalAfterStep;
