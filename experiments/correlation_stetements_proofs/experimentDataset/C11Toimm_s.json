@@ -1,0 +1,1 @@
+[{"statement":"Lemma s_imm_consistentimplies_c11_consistent (WF: Wf G) sc\n      (IPC : imm_s.imm_psc_consistent G sc) :\n  c11_consistent G.","proof":"cdes IPC.\ncdes IC.\nred.\nsplits; auto.\n"}]
