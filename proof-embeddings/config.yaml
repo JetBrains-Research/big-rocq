@@ -1,0 +1,31 @@
+project_name: "coq-theorem-embedding"
+experiment_name: "baseline-contrastive"
+
+dataset_path: "./data/theorems.json"
+train_split: 0.8
+val_split: 0.1
+test_split: 0.1
+
+model_name: "bert-base-uncased"
+max_seq_length: 128
+embedding_dim: 768
+freeze_bert: false        # If true, only train top layers
+
+loss_type: "contrastive"  # "contrastive" or "triplet"
+margin: 1.0               # margin for contrastive/triplet
+threshold_pos: 10.0       # proof distance <= threshold -> positive
+threshold_neg: 50.0       # proof distance >= threshold -> negative
+
+epochs: 3
+batch_size: 16
+learning_rate: 2e-5
+random_seed: 52
+
+wandb:
+  enabled: true
+  project: "coq-embeddings"
+  entity: "kozyrev-andreiii2016"
+  tags: ["baseline", "contrastive"]
+
+evaluation:
+  recall_k: [1, 5, 10]

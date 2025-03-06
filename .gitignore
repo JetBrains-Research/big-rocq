@@ -18,3 +18,5 @@ dataset/**/result
 dataset/**/.vscode/
 
 tempDatasetView*/
+
+**/**/__pycache__/

@@ -1,9 +1,7 @@
 import json
-import math
 import itertools
 import logging
-from typing import List, Tuple
-from collections import Counter
+from typing import List
 from bm25 import bm25, compute_doc_freqs
 import os
 from tqdm import tqdm
@@ -46,7 +44,6 @@ def split_proof_into_sentences(proof_text: str) -> List[str]:
     return sentences
 
 
-@lru_cache(None)
 def normalized_string_distance(s1: str, s2: str) -> float:
     """
     Normalized Levenshtein: distance(s1, s2) / max(len(s1), len(s2)).
@@ -98,18 +95,26 @@ def proof_distance(proof1: str, proof2: str) -> float:
     return dp[n1][n2]
 
 
+def normalized_proof_distance(proof1: str, proof2: str) -> float:
+    sents1 = split_proof_into_sentences(proof1)
+    sents2 = split_proof_into_sentences(proof2)
+    n1, n2 = len(sents1), len(sents2)
+    max_sents = max(n1, n2)
+    if max_sents == 0:
+        return 0.0
+    return proof_distance(proof1, proof2) / float(max_sents)
+
+
 def tokenize_statement(stmt: str) -> List[str]:
     return stmt.lower().split()
 
 
 def build_bm25_matrix(statements: List[List[str]]) -> List[List[float]]:
     """
-    Returns an NxN matrix of BM25 "similarities" for each pair of statements.
-    
-    We do a symmetrical approach:
+    Build NxN matrix of BM25 "similarities" for each pair of statements.
       sim(i,j) = 0.5 * [bm25(statements[i], [statements[j]]) 
                         + bm25(statements[j], [statements[i]])]
-    so that it's more "distance-like" in that it's symmetrical.
+    To make it symmetric, we average the two BM25 scores.
     """
     n = len(statements)
     if n == 0:
@@ -132,7 +137,7 @@ def build_bm25_matrix(statements: List[List[str]]) -> List[List[float]]:
 
 
 def main():
-    dataset_path = "experimentDataset"
+    dataset_path = "perfectCorrelation"
     data = load_all_json_data(dataset_path)
 
     statements_raw = [d["statement"] for d in data]
@@ -150,7 +155,7 @@ def main():
     with tqdm(total=total_pairs, desc="Computing pairwise proof distances") as pbar:
         for i in range(n):
             for j in range(i+1, n):
-                dist_ij = proof_distance(proofs[i], proofs[j])
+                dist_ij = normalized_proof_distance(proofs[i], proofs[j])
                 proof_dist_matrix[i][j] = dist_ij
                 proof_dist_matrix[j][i] = dist_ij
                 pbar.update(1)
@@ -180,6 +185,11 @@ def main():
 if __name__ == "__main__":
     main()
 
-# Results on 2000 IMM theorems: 
+# Results on 1927 IMM theorems (1855701 pairs): 
+# Bm25(stetements) correlation with Levenshtein(proofs) distance:
 # Pearson correlation: -0.15425089416981363 , p-value = 0.0
 # Spearman correlation: -0.17093627617989743 , p-value = 0.0
+# Bm25(proofs) correlation with Bm25(proofs) distance:
+# Pearson correlation =  0.0293  p-value = 0.0
+# Spearman correlation = 0.23972122829525572  p-value = 0.0
+# Both results are to be considered as negligible correlation.
