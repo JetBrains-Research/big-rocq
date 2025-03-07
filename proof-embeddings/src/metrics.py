@@ -1,6 +1,6 @@
-import numpy as np
 from scipy.stats import pearsonr, spearmanr
 from typing import List, Tuple
+
 
 def compute_correlation_scores(
     distances_pred: List[float],
@@ -18,6 +18,10 @@ def recall_at_k(
 ) -> dict:
     results = {}
     n = len(query2truth)
+
+    if n == 0:
+        return {k: 0.0 for k in k_values}
+
     for k in k_values:
         correct = 0
         for q_idx, relevant_set in query2truth.items():

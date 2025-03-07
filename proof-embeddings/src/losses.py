@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 class ContrastiveLoss(nn.Module):
     """
     L = y * 1/2 * d^2 + (1-y) * 1/2 * max(0, margin - d)^2,

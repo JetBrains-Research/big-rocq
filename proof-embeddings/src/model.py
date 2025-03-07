@@ -1,6 +1,6 @@
-import torch
 import torch.nn as nn
 from transformers import BertModel
+
 
 class BERTStatementEmbedder(nn.Module):
     def __init__(self, model_name: str, freeze_bert: bool = False, embedding_dim: int = 768):

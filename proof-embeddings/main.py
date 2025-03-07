@@ -3,9 +3,10 @@ import wandb
 import random
 import numpy as np
 from omegaconf import OmegaConf
-from data import load_json_dataset, split_dataset
-from dataset import TheoremDataset
-from train import evaluate, train_loop
+
+from src import load_json_dataset, split_dataset
+from src import TheoremDataset
+from src import train_loop, evaluate
 
 def main(cfg_path: str = "config.yaml"):
     cfg = OmegaConf.load(cfg_path)

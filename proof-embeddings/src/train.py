@@ -1,13 +1,11 @@
 import torch
 import wandb
-import numpy as np
 from tqdm import tqdm
 from torch.utils.data import DataLoader
 
-from losses import ContrastiveLoss, TripletMarginLoss
-from metrics import compute_correlation_scores, recall_at_k
-from model import BERTStatementEmbedder
-from dataset import TheoremDataset
+from .losses import ContrastiveLoss, TripletMarginLoss
+from .metrics import compute_correlation_scores, recall_at_k
+from .model import BERTStatementEmbedder
 
 def train_one_epoch(
     model,

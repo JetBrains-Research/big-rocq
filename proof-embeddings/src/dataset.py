@@ -1,9 +1,9 @@
-import torch
 from torch.utils.data import Dataset
-from typing import List, Dict, Any, Tuple, Optional, Union
+from typing import List, Dict, Any, Tuple
 import random
 
-from similarity import compute_proof_distance
+from .similarity import proof_distance
+
 
 class TheoremDataset(Dataset):
     def __init__(
@@ -54,7 +54,7 @@ class TheoremDataset(Dataset):
             for j in possible_js:
                 if i == j:
                     continue
-                dist = compute_proof_distance(self.proofs[i], self.proofs[j])
+                dist = proof_distance(self.proofs[i], self.proofs[j])
                 pairs.append((i, j, dist))
         return pairs
 

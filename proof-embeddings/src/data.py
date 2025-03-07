@@ -3,7 +3,9 @@ import logging
 import os
 from typing import List, Dict, Any
 
+
 logger = logging.getLogger(__name__)
+
 
 def load_json_dataset(path: str) -> List[Dict[str, Any]]:
     """
@@ -16,6 +18,7 @@ def load_json_dataset(path: str) -> List[Dict[str, Any]]:
         data = json.load(f)
     logger.info(f"Loaded {len(data)} records from {path}")
     return data
+
 
 def split_dataset(data: List[Dict[str, Any]], train_ratio: float, val_ratio: float, test_ratio: float):
     assert abs(train_ratio + val_ratio + test_ratio - 1.0) < 1e-7, "Ratios must sum to 1."
