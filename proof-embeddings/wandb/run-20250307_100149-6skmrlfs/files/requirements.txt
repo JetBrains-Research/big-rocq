@@ -21,7 +21,7 @@ regex==2024.5.15
 aimo_smol==0.1
 ipython==8.24.0
 pillow==10.3.0
-Jinja2==3.1.4
+Jinja2==3.1.6
 pydantic==2.10.6
 wrapt==1.17.0
 multidict==6.0.5
