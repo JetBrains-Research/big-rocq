@@ -5,6 +5,7 @@ import {
     TextDocumentIdentifier,
     VersionedTextDocumentIdentifier,
 } from "vscode-languageclient";
+
 import { stringifyAnyValue } from "../utils/printers";
 
 export type ProofGoal = Goal<PpString>;

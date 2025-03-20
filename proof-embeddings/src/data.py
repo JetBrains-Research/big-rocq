@@ -8,9 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 def load_json_dataset(path: str) -> List[Dict[str, Any]]:
-    """
-    Expects a JSON in format { 'statement': str, 'proof': str or list[str] }.
-    """
     if not os.path.exists(path):
         raise FileNotFoundError(f"Dataset path does not exist: {path}")
     logger.info(f"Loading dataset from {path}")
@@ -26,6 +23,11 @@ def split_dataset(data: List[Dict[str, Any]], train_ratio: float, val_ratio: flo
     n = len(data)
     train_size = int(n * train_ratio)
     val_size = int(n * val_ratio)
+    test_size = n - train_size - val_size
+    
+    logger.info(f"Splitting dataset into {train_size} training samples, {val_size} validation samples, and {test_size} testing samples")
+    if (train_size <= 1) or (val_size <= 1) or (test_size <= 1):
+        logger.error("One of the splits is <= 1. Check the ratios. Length minimum 2 is required to compute correlations.")
 
     train_data = data[:train_size]
     val_data = data[train_size:train_size+val_size]

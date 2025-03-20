@@ -1,10 +1,8 @@
 import * as assert from "assert";
 import { Err, Ok, Result } from "ts-results";
 
-// import { CoqProofTree } from "../../../coqProofTree/coqProofTree";
 import { CoqProofTreeNode } from "../../../coqProofTree/coqProofTreeNode";
 import {
-    // constructTheoremWithProof,
     theoremDatasetSampleToString,
 } from "../../../coqProofTree/proofBuilder";
 import { PpMode, ppGoal } from "../../../utils/proofStatePrinters";

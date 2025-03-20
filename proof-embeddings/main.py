@@ -3,16 +3,27 @@ import wandb
 import random
 import numpy as np
 from omegaconf import OmegaConf
+import logging
+from torch.utils.data import DataLoader
 
 from src import load_json_dataset, split_dataset
 from src import TheoremDataset
 from src import train_loop, evaluate
+
 
 def main(cfg_path: str = "config.yaml"):
     cfg = OmegaConf.load(cfg_path)
     random.seed(cfg.random_seed)
     np.random.seed(cfg.random_seed)
     torch.manual_seed(cfg.random_seed)
+
+    log_level_str = cfg.get("log_level", "WARNING").upper()
+    log_level = getattr(logging, log_level_str, logging.WARNING)
+
+    logging.basicConfig(
+        level=log_level,
+        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+    )
 
     if cfg.wandb.enabled:
         wandb.init(
@@ -33,13 +44,11 @@ def main(cfg_path: str = "config.yaml"):
 
     train_dataset = TheoremDataset(
         train_data, tokenizer, cfg.max_seq_length, 
-        cfg.threshold_pos, cfg.threshold_neg, 
-        mode="train"
+        cfg.threshold_pos, cfg.threshold_neg
     )
     val_dataset = TheoremDataset(
         val_data, tokenizer, cfg.max_seq_length, 
-        cfg.threshold_pos, cfg.threshold_neg, 
-        mode="train"
+        cfg.threshold_pos, cfg.threshold_neg
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -48,11 +57,10 @@ def main(cfg_path: str = "config.yaml"):
     model.to(device)
     test_dataset = TheoremDataset(
         test_data, tokenizer, cfg.max_seq_length, 
-        cfg.threshold_pos, cfg.threshold_neg, 
-        mode="test"
+        cfg.threshold_pos, cfg.threshold_neg
     )
 
-    test_loader = TheoremDataset(test_dataset, batch_size=cfg.batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=cfg.batch_size, shuffle=False)
     test_results = evaluate(model, test_loader, device)
     
     wandb.log({

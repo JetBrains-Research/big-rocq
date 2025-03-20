@@ -1,5 +1,6 @@
 project_name: "coq-theorem-embedding"
 experiment_name: "baseline-contrastive"
+log_level: "INFO"
 
 dataset_path: "./data/theorems.json"
 train_split: 0.8
@@ -12,9 +13,9 @@ embedding_dim: 768
 freeze_bert: false        # If true, only train top layers
 
 loss_type: "contrastive"  # "contrastive" or "triplet"
-margin: 1.0               # margin for contrastive/triplet
-threshold_pos: 10.0       # proof distance <= threshold -> positive
-threshold_neg: 50.0       # proof distance >= threshold -> negative
+margin: 1.0
+threshold_pos: 0.4       # proof distance <= threshold -> positive
+threshold_neg: 0.6       # proof distance >= threshold -> negative
 
 epochs: 3
 batch_size: 16

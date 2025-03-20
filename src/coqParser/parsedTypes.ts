@@ -134,9 +134,16 @@ export class TheoremProof {
         return text;
     }
 
-    public onlyText(): string {
+    /**
+     * @param contentsOnly Whether to return only the inner contents of the proof,
+     * without 'Proof.' and 'Qed.'
+     */
+    public onlyText(contentsOnly: boolean = false): string {
         let text = "";
-        for (const step of this.proof_steps) {
+        const proofSteps = contentsOnly
+            ? this.proof_steps.slice(1, -1)
+            : this.proof_steps;
+        for (const step of proofSteps) {
             text +=
                 step.text.trim() +
                 (step.vernac_type !== Vernacexpr.VernacBullet ? "\n" : " ");

@@ -73,8 +73,10 @@ export class CoqProofTreeNode {
         proofStateBeforeTactic: GoalConfig<PpString>,
         proofStateAfterTactic: GoalConfig<PpString>
     ): CoqProofTreeNode[] {
-
-        assert(!appliedProofStep.hasGoalSelector, "Tried to push a tactic with goal selector to the proof tree");
+        assert(
+            !appliedProofStep.hasGoalSelector,
+            "Tried to push a tactic with goal selector to the proof tree"
+        );
 
         if (
             proofStateBeforeTactic.goals.length - 1 ===

@@ -52,6 +52,7 @@ Proof.
   intros n H.
   destruct n.
   par: try contradiction; try reflexivity.
+  auto. auto.
 Qed.
 
 Theorem single_goal : forall (n : nat), 0 + n = n.

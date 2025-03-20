@@ -17,7 +17,7 @@ const coqAugmentedFilesDir = "tempDatasetView/augmentedFiles";
  * @param rootPath The relative root path of the project being processed
  * @param coqDatasetFile The processed data from which the augmented file will be generated
  *
- * @returns Returns the length of the generated file
+ * @returns Returns the length of the generated file for statistics calculation
  */
 export function generateCoqAugmentedFile(
     rootPath: string,
@@ -29,7 +29,7 @@ export function generateCoqAugmentedFile(
 
     const fileSubdir = path.dirname(relativeFromRoot);
     const fileName = path.parse(coqDatasetFile.filePath).name;
-    const fileDir = path.join(coqAugmentedFilesDir, fileSubdir, fileName);
+    const fileDir = path.join(coqAugmentedFilesDir, fileSubdir);
     ensureDirExists(fileDir);
 
     const augmentedFilePath = path.join(fileDir, `${fileName}_augmented.v`);
@@ -110,7 +110,8 @@ function aggregateGeneratedSamples(
     }
 
     const samples = theorem.proofTreeBuildResult.val.samples;
-    // Remove root
+    // Remove augmented sample that represents the augmented
+    // sample with zero tactics removed from the proof
     samples.delete(0);
 
     if (samples.size === 0) {

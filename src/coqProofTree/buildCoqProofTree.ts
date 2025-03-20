@@ -2,7 +2,11 @@ import { Err, Ok, Result } from "ts-results";
 import { Position } from "vscode-languageclient";
 
 import { CoqLspClient } from "../coqLsp/coqLspClient";
-import { compareGoalConfigs, GoalConfig, PpString } from "../coqLsp/coqLspTypes";
+import {
+    GoalConfig,
+    PpString,
+    compareGoalConfigs,
+} from "../coqLsp/coqLspTypes";
 
 import {
     ProofStep,
@@ -171,8 +175,11 @@ export async function buildCoqProofTree(
             );
 
             if (step.vernac_type === Vernacexpr.VernacExtend) {
-                if (skipZeroProgressTactics && compareGoalConfigs(currentProofState, goalAfterStep)) {
-                    // skip 
+                if (
+                    skipZeroProgressTactics &&
+                    compareGoalConfigs(currentProofState, goalAfterStep)
+                ) {
+                    // skip
                 } else {
                     proofTree.applyToFirstUnsolvedGoal(
                         step,

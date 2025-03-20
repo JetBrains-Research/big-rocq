@@ -12,15 +12,13 @@ class TheoremDataset(Dataset):
         tokenizer,
         max_seq_length: int,
         threshold_pos: float,
-        threshold_neg: float,
-        mode: str = "train"
+        threshold_neg: float
     ):
         self.data = data
         self.tokenizer = tokenizer
         self.max_seq_length = max_seq_length
         self.threshold_pos = threshold_pos
         self.threshold_neg = threshold_neg
-        self.mode = mode
 
         self.statements = [d["statement"] for d in data]
         self.proofs = [d["proof"] for d in data]
@@ -36,15 +34,9 @@ class TheoremDataset(Dataset):
             for s in self.statements
         ]
 
-        if self.mode == "train":
-            self.pairs = self._create_pairs()
-        else:
-            self.pairs = [(i, i) for i in range(len(data))]
+        self.pairs = self._create_pairs()
 
     def _create_pairs(self) -> List[Tuple[int, int, float]]:
-        """
-        Creates (i, j, distance_ij) tuples
-        """
         indices = list(range(len(self.data)))
         random.shuffle(indices)
 

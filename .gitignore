@@ -20,3 +20,4 @@ dataset/**/.vscode/
 tempDatasetView*/
 
 **/**/__pycache__/
+**/**/wandb

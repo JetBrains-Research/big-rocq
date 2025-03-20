@@ -63,7 +63,7 @@ export function parseUtilityRunParams(runArgs: BigRocqCliArguments): RunParams {
         fileTypeCheckingTimeoutMillis: validatedArgs.fileTimeout,
         generateDatasetViewer: validatedArgs.generateDatasetViewer,
         generateAugmentedCoqFiles: validatedArgs.generateAugmentedCoqFiles,
-        skipZeroProgressTactics: validatedArgs.skipZeroProgressTactics
+        skipZeroProgressTactics: validatedArgs.skipZeroProgressTactics,
     };
 }
 

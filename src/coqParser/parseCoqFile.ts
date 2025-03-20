@@ -64,7 +64,7 @@ async function parseFlecheDocument(
     extractTheoremInitialGoal: boolean,
     eventLogger?: EventLogger
 ): Promise<Theorem[]> {
-    // If text contains Set Default Goal Selector 
+    // If text contains Set Default Goal Selector
     // then the parsing of goal selectors will be incorrect
     // throw an error in this case
     // TODO: Probably figure out a way to work with this

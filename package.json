@@ -21,6 +21,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint \"src/**/*.{ts,js}\" --ext .ts",
+    "recompile": "npm run clean && npm run compile",
     "format": "prettier --write \"src/**/*.{ts,js}\" && eslint \"src/**/*.{ts,js}\" --ext .ts --fix",
     "test-executables-unsafe": "node ./out/test/runTest.js",
     "test-only": "npm run test-executables-unsafe -- -r=\"\\[SourceExecutable\\] *\" -i=true",

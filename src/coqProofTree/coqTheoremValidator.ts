@@ -343,7 +343,7 @@ export class CoqTheoremValidator implements CoqTheoremValidatorInterface {
                 if (error instanceof CoqLspError) {
                     this.eventLogger?.log(
                         "timeout",
-                        `Timeout while checking theorem ${theorem.theoremStatement}`
+                        `Timeout while checking theorem ${theorem.namedTheoremStatement}`
                     );
 
                     validationResults.set(index, {

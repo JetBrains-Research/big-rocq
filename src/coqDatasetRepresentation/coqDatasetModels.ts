@@ -5,7 +5,8 @@ import { CoqProofTree } from "../coqProofTree/coqProofTree";
 
 // TODO: Separate visualisation from core dataset models
 export interface TheoremDatasetSample {
-    theoremStatement: string;
+    namedTheoremStatement: string;
+    statement: string; 
     proof: string;
     proofLength: number;
 }

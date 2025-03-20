@@ -11,14 +11,14 @@ import { HypothesesDict } from "./coqTheoremValidator";
 export function theoremDatasetSampleToString(
     sample: TheoremDatasetSample
 ): string {
-    return `${sample.theoremStatement}\nProof.\n${sample.proof}\nQed.`;
+    return `${sample.namedTheoremStatement}\nProof.\n${sample.proof}\nQed.`;
 }
 
 function hypToString(hyp: Hyp<PpString>): string {
     return `${hyp.names.join(" ")} : ${hyp.ty}`;
 }
 
-function goalToTheoremStatement(
+function goalToNamedTheoremStatement(
     proofGoal: Goal<PpString>,
     currentTheoremName: string,
     predefinedIndex: number,
@@ -31,6 +31,18 @@ function goalToTheoremStatement(
 
     let name = `${currentTheoremName}_br_helper_${predefinedIndex}`;
     return `Theorem ${name} ${theoremIndeces} :\n   ${auxTheoremConcl}.`;
+}
+
+function goalToStatement(
+    proofGoal: Goal<PpString>,
+    skippedHyps: HypothesesDict
+): string {
+    const auxTheoremConcl = proofGoal?.ty;
+    const theoremIndeces = removeSkippedHypotheses(proofGoal.hyps, skippedHyps)
+        .map((hyp) => `(${hypToString(hyp)})`)
+        .join(" ");
+    const indicesStr = theoremIndeces.length > 0 ? `${theoremIndeces} : ` : "";
+    return `${indicesStr}${auxTheoremConcl}.`;
 }
 
 function removeSkippedHypotheses(
@@ -57,14 +69,18 @@ export function constructTheoremWithProof(
     predefinedIndex: number,
     skippedHyps: HypothesesDict
 ): TheoremDatasetSample {
-    const theoremStatement = goalToTheoremStatement(
+    const namedTheoremStatement = goalToNamedTheoremStatement(
         proofState,
         currentTheoremName,
         predefinedIndex,
         skippedHyps
     );
+    const statement = goalToStatement(
+        proofState,
+        skippedHyps
+    )
     const proof = proofSteps.map((step) => step.text).join("\n");
-    return { theoremStatement, proof, proofLength: proofSteps.length };
+    return { namedTheoremStatement, proof, statement, proofLength: proofSteps.length };
 }
 
 export function augmentTreeToSamples(

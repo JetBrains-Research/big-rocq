@@ -21,6 +21,7 @@ import {
     accumulateStats,
     emptyDatasetStats,
 } from "../coqDatasetRepresentation/statisticsCalculation";
+import { storeCoqAugmentedSamples } from "../coqDatasetRepresentation/storeAugmentedSamples";
 import { parseCoqFile } from "../coqParser/parseCoqFile";
 import { buildCoqProofTree } from "../coqProofTree/buildCoqProofTree";
 import { CoqTheoremValidator } from "../coqProofTree/coqTheoremValidator";
@@ -216,7 +217,7 @@ export class ProjectProcessor {
                     this.coqLspClient,
                     fileUri,
                     1,
-                    this.runArgs.skipZeroProgressTactics,
+                    this.runArgs.skipZeroProgressTactics
                 );
                 if (proofTree.err) {
                     this.eventLogger.log(
@@ -287,6 +288,8 @@ export class ProjectProcessor {
                 coqDatasetFileItem.stats.processingTimeMillis =
                     timeMark.measureElapsedMillis();
             }
+
+            storeCoqAugmentedSamples(rootPath, coqDatasetFileItem);
 
             return coqDatasetFileItem;
         } catch (e) {

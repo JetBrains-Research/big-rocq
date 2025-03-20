@@ -1,11 +1,14 @@
 from scipy.stats import pearsonr, spearmanr
 from typing import List, Tuple
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def compute_correlation_scores(
     distances_pred: List[float],
     distances_true: List[float]
-) -> Tuple[float, float, float, float]:
+) -> Tuple[float, float, float, float]:    
     pearson_corr, p_pearson = pearsonr(distances_pred, distances_true)
     spearman_corr, p_spearman = spearmanr(distances_pred, distances_true)
     return pearson_corr, p_pearson, spearman_corr, p_spearman
