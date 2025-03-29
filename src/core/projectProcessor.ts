@@ -39,7 +39,7 @@ export class ProjectProcessor {
         public readonly logger: Logger,
         public readonly abortController: AbortController,
         public readonly runArgs: RunParams,
-        private readonly coqLspClient: CoqLspClient
+        private coqLspClient: CoqLspClient
     ) {}
 
     static async create(runArgs: RunParams): Promise<ProjectProcessor> {
@@ -90,10 +90,13 @@ export class ProjectProcessor {
         return path.extname(filePath) === ".v";
     }
 
+    private timeout = (ms: number) => new Promise((_, reject) => setTimeout(reject, ms));
+
     private async processDir(
         rootPath: string,
         accumulatedPath: string,
-        generateDatasetViewer: boolean = true
+        generateDatasetViewer: boolean = true,
+        timeoutMillis: number = 3000000
     ): Promise<CoqDatasetFolder> {
         const datasetFolderItem: CoqDatasetFolder = {
             dirPath: accumulatedPath,
@@ -127,16 +130,37 @@ export class ProjectProcessor {
                         dirItem.stats
                     );
                 } else if (item.isFile() && item.name.endsWith(".v")) {
-                    const datasetItem = await this.processFile(
-                        rootPath,
-                        `${accumulatedPath}/${item.name}`
-                    );
+                    const timeoutPromise = this.timeout(timeoutMillis).then(() => {
+                        throw new Error(`Timeout exceeded while processing file ${item.name}, probably Coq LSP is down`);
+                    });
 
-                    datasetFolderItem.dirItems.push(datasetItem);
-                    datasetFolderItem.stats = accumulateStats(
-                        datasetFolderItem.stats,
-                        datasetItem.stats
-                    );
+                    try {
+                        const datasetItem = await Promise.race([
+                            this.processFile(rootPath, `${accumulatedPath}/${item.name}`),
+                            timeoutPromise,
+                        ]);
+
+                        datasetFolderItem.dirItems.push(datasetItem);
+                        datasetFolderItem.stats = accumulateStats(
+                            datasetFolderItem.stats,
+                            datasetItem.stats
+                        );
+                    } catch (e) {
+                        this.eventLogger.log(
+                            "error-processing-file",
+                            `Error processing file ${item.name}: ${e}`,
+                            null,
+                            Severity.ERROR
+                        );
+
+                        this.coqLspClient = await createCoqLspClient(
+                            this.runArgs.workspaceRootPath,
+                            this.runArgs.coqLspServerPath,
+                            undefined,
+                            this.eventLogger,
+                            this.abortController
+                        );
+                    }
                 }
             }
         } catch (e) {

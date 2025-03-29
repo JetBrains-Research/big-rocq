@@ -5,7 +5,7 @@ import torch.nn as nn
 class ContrastiveLoss(nn.Module):
     """
     L = y * 1/2 * d^2 + (1-y) * 1/2 * max(0, margin - d)^2,
-        where d - euclidean distance between embeddings
+        where d - Euclidean distance between embeddings
     y=1 for positive, y=0 for negative.
     """
     def __init__(self, margin: float):

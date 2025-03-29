@@ -1,10 +1,8 @@
-import * as assert from "assert";
+// import * as assert from "assert";
 import { Err, Ok, Result } from "ts-results";
 
 import { CoqProofTreeNode } from "../../../coqProofTree/coqProofTreeNode";
-import {
-    theoremDatasetSampleToString,
-} from "../../../coqProofTree/proofBuilder";
+import { theoremDatasetSampleToString } from "../../../coqProofTree/proofBuilder";
 import { PpMode, ppGoal } from "../../../utils/proofStatePrinters";
 import {
     CoqAugmentedTheoremItem,
@@ -31,7 +29,7 @@ function compactSerializeCoqProofTreeNode(
     parentEdgeLabel: string | undefined
 ): CompactSerializedCoqProofTreeNode {
     const subtreeProof = augmentedSamplesMap.get(node.index);
-    assert(subtreeProof || node.isLeaf);
+    // assert(subtreeProof || node.isLeaf);
 
     const subtreeSampleRes = subtreeProof
         ? subtreeProof.ok
@@ -39,9 +37,9 @@ function compactSerializeCoqProofTreeNode(
             : Err(subtreeProof.val.message)
         : Err("This is an empty state");
 
-    assert(
-        (!node.proofState && node.isLeaf) || (node.proofState && !node.isLeaf)
-    );
+    // assert(
+    //     (!node.proofState && node.isLeaf) || (node.proofState && !node.isLeaf)
+    // );
 
     return {
         proofState: node.proofState

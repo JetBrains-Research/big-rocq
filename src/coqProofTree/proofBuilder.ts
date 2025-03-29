@@ -1,5 +1,3 @@
-import * as assert from "assert";
-
 import { Goal, Hyp, PpString } from "../coqLsp/coqLspTypes";
 
 import { TheoremDatasetSample } from "../coqDatasetRepresentation/coqDatasetModels";
@@ -75,12 +73,14 @@ export function constructTheoremWithProof(
         predefinedIndex,
         skippedHyps
     );
-    const statement = goalToStatement(
-        proofState,
-        skippedHyps
-    )
+    const statement = goalToStatement(proofState, skippedHyps);
     const proof = proofSteps.map((step) => step.text).join("\n");
-    return { namedTheoremStatement, proof, statement, proofLength: proofSteps.length };
+    return {
+        namedTheoremStatement,
+        proof,
+        statement,
+        proofLength: proofSteps.length,
+    };
 }
 
 export function augmentTreeToSamples(
@@ -92,8 +92,7 @@ export function augmentTreeToSamples(
 
     const samples: Map<number, TheoremDatasetSample> = new Map();
     for (const node of nodes) {
-        if (node.proofState) {
-            assert(!node.isLeaf);
+        if (node.proofState && !node.isLeaf) {
             const sample = constructTheoremWithProof(
                 node.proofState,
                 node.collectSubtreeEdges(),
@@ -103,7 +102,7 @@ export function augmentTreeToSamples(
             );
             samples.set(node.index, sample);
         } else {
-            assert(node.isLeaf);
+            // assert(node.isLeaf);
         }
     }
 

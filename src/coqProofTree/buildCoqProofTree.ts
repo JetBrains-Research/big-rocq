@@ -68,11 +68,14 @@ export async function getProofInitialState(
     );
 }
 
-function throwIfMultipleGoalsOnStart(initialGoals: GoalConfig<PpString>) {
+function throwIfMultipleGoalsOnStart(
+    initialGoals: GoalConfig<PpString>,
+    theoremName: string
+) {
     // TODO: We cannot have multiple goals on start, right?
     if (initialGoals.goals.length !== 1) {
         throw new CoqProofTreeError(
-            `Unexpected multiple goals in initial goal in theorem`
+            `Unexpected multiple goals in initial goal in theorem ${theoremName}`
         );
     }
 }
@@ -136,14 +139,6 @@ export async function buildCoqProofTree(
     docVersion: number,
     skipZeroProgressTactics: boolean
 ): Promise<Result<CoqProofTree, CoqProofTreeError>> {
-    try {
-        throwIfCannotProcess(theorem);
-    } catch (e) {
-        if (e instanceof CoqProofTreeError) {
-            return Err(e);
-        }
-    }
-
     const proof = theorem.proof;
     const initialGoals = await getProofInitialState(
         proof,
@@ -151,7 +146,18 @@ export async function buildCoqProofTree(
         docUri,
         docVersion
     );
-    throwIfMultipleGoalsOnStart(initialGoals);
+
+    try {
+        throwIfCannotProcess(theorem);
+        throwIfMultipleGoalsOnStart(
+            initialGoals,
+            theorem.name
+        );
+    } catch (e) {
+        if (e instanceof CoqProofTreeError) {
+            return Err(e);
+        }
+    }
 
     const initialGoalNullable = initialGoals.goals.at(0);
     const initialGoal = unwrapOrThrow(initialGoalNullable);

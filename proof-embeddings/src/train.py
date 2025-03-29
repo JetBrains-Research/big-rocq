@@ -47,6 +47,7 @@ def evaluate(
     model,
     dataloader,
     device,
+    pos_threshold,
     k_values=[1,5,10]
 ):
     model.eval()
@@ -75,6 +76,13 @@ def evaluate(
         idx_i = batch["idx_i"].cpu().numpy()
         idx_j = batch["idx_j"].cpu().numpy()
 
+        # Print statements in the batch
+        # for i in range(len(idx_i)):
+        #     print(f"Statement pair: {dataloader.dataset.statements[idx_i[i]]} and {dataloader.dataset.statements[idx_j[i]]}")
+        #     print(f"Distance: {dist[i].item()}, Predicted Distance: {dist_pred[i].item()}")
+        #
+        # print(f"Statements in batch: { [dataloader.dataset.statements[i] for i in idx_i] }")
+
         for b in range(len(idx_i)):
             anchor = int(idx_i[b])
             other = int(idx_j[b])
@@ -86,8 +94,12 @@ def evaluate(
 
             if anchor not in anchor2truth:
                 anchor2truth[anchor] = set()
-            if dist[b].item() <= 10.0:
+            if dist[b].item() <= pos_threshold:
                 anchor2truth[anchor].add(other)
+
+    # Print anchor2truth
+    # for anchor, truth in anchor2truth.items():
+    #     print(f"Statement {dataloader.dataset.statements[anchor]}, Truth: { [dataloader.dataset.statements[t] for t in truth] }")
 
     query2preds = {}
     for anchor, dist_list in anchor2pred.items():
@@ -133,7 +145,7 @@ def train_loop(
 
     for epoch in range(cfg.epochs):
         train_loss = train_one_epoch(model, loss_fn, train_loader, optimizer, device)
-        metrics_val = evaluate(model, val_loader, device, cfg.evaluation.recall_k)
+        metrics_val = evaluate(model, val_loader, device, cfg.threshold_pos, cfg.evaluation.recall_k)
 
         wandb.log({
             "epoch": epoch,

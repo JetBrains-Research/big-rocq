@@ -2,22 +2,22 @@ project_name: "coq-theorem-embedding"
 experiment_name: "baseline-contrastive"
 log_level: "INFO"
 
-dataset_path: "./data/theorems.json"
+dataset_path: "./data/"
 train_split: 0.8
 val_split: 0.1
 test_split: 0.1
 
-model_name: "bert-base-uncased"
+model_name: "prajjwal1/bert-tiny"
 max_seq_length: 128
 embedding_dim: 768
 freeze_bert: false        # If true, only train top layers
 
 loss_type: "contrastive"  # "contrastive" or "triplet"
-margin: 1.0
-threshold_pos: 0.4       # proof distance <= threshold -> positive
-threshold_neg: 0.6       # proof distance >= threshold -> negative
+margin: 0.2
+threshold_pos: 0.2       # proof distance <= threshold -> positive
+threshold_neg: 0.5       # proof distance >= threshold -> negative
 
-epochs: 3
+epochs: 6
 batch_size: 16
 learning_rate: 2e-5
 random_seed: 52
@@ -29,4 +29,5 @@ wandb:
   tags: ["baseline", "contrastive"]
 
 evaluation:
+#  recall_k: [1, 2, 3]
   recall_k: [1, 5, 10]

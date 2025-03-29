@@ -21,7 +21,7 @@ class TheoremDataset(Dataset):
         self.threshold_neg = threshold_neg
 
         self.statements = [d["statement"] for d in data]
-        self.proofs = [d["proof"] for d in data]
+        self.proofs = [d["proofString"] for d in data]
 
         self.encoded_statements = [
             tokenizer(
@@ -36,18 +36,26 @@ class TheoremDataset(Dataset):
 
         self.pairs = self._create_pairs()
 
-    def _create_pairs(self) -> List[Tuple[int, int, float]]:
+    """
+    @param pair_factor: How many pairs (at most) to create for each statement
+    """
+    def _create_pairs(
+        self,
+        pair_factor: int = 10
+    ) -> List[Tuple[int, int, float]]:
         indices = list(range(len(self.data)))
         random.shuffle(indices)
 
         pairs = []
         for i in range(len(self.data)):
-            possible_js = random.sample(indices, min(10, len(indices)))
+            possible_js = random.sample(indices, min(pair_factor, len(indices)))
             for j in possible_js:
                 if i == j:
                     continue
                 dist = proof_distance(self.proofs[i], self.proofs[j])
                 pairs.append((i, j, dist))
+        random.shuffle(pairs)
+
         return pairs
 
     def __len__(self):
@@ -82,3 +90,11 @@ class TheoremDataset(Dataset):
             "idx_i": i,
             "idx_j": j
         }
+
+    def preview_dataset(self, n: int = 5):
+        for i in range(min(n, len(self.pairs))):
+            print(f"""
+            Pair between {self.statements[self.pairs[i][0]]} and {self.statements[self.pairs[i][1]]}
+            Distance: {self.pairs[i][2]}
+            ----------------------------------------------
+            """)

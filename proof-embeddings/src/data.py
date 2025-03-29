@@ -7,14 +7,37 @@ from typing import List, Dict, Any
 logger = logging.getLogger(__name__)
 
 
-def load_json_dataset(path: str) -> List[Dict[str, Any]]:
+
+"""
+Recursively load all JSON files in a directory and return
+the concatenated dataset.
+"""
+def load_dataset(root: str) -> List[Dict[str, Any]]:
+    if not os.path.exists(root):
+        raise FileNotFoundError(f"Dataset root does not exist: {root}")
+    
+    dataset = []
+    for root, _, files in os.walk(root):
+        for file in files:
+            if file.endswith(".json"):
+                dataset += load_single_file_json_dataset(os.path.join(root, file))
+    
+    return dataset
+
+def load_single_file_json_dataset(path: str) -> List[Dict[str, Any]]:
     if not os.path.exists(path):
         raise FileNotFoundError(f"Dataset path does not exist: {path}")
     logger.info(f"Loading dataset from {path}")
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
-    logger.info(f"Loaded {len(data)} records from {path}")
-    return data
+
+    if "fileSamples" not in data or "filePath" not in data:
+        logger.error(f"Invalid JSON file: {path}")
+        return []
+
+    dataset = data["fileSamples"]
+    logger.info(f"Loaded {len(dataset)} records from {data['filePath']}")
+    return dataset
 
 
 def split_dataset(data: List[Dict[str, Any]], train_ratio: float, val_ratio: float, test_ratio: float):

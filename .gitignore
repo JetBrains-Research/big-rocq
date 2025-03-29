@@ -21,3 +21,6 @@ tempDatasetView*/
 
 **/**/__pycache__/
 **/**/wandb
+
+**/**/.idea
+**/**/.cadence

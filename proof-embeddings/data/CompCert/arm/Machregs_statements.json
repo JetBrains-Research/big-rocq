@@ -1,0 +1,1 @@
+{"filePath":"/Users/andrei/MCS_Projects/coqPilotOther/CompCert/arm/Machregs.v","fileSamples":[{"statement":"(r : mreg) (H : In r all_mregs) : In r all_mregs.","proofString":"auto."}]}

@@ -1,0 +1,85 @@
+{
+  "filePath": "/Users/andrei/MCS_Projects/coqPilotOther/bigRocq/dataset/imm/src/basic/Events.v",
+  "fileSamples": [
+    {
+      "statement": "(x y z : A) (H : loc x = loc y) (H0 : loc y = loc z) : loc x = loc z.",
+      "proofString": "by rewrite H."
+    },
+    {
+      "statement": "(x : A) (s : x_mode) (o : mode) (l : location) (v : value) (Heq : lab x = Astore s o l v) (WX : true) : exists v0 : value, Some v = Some v0.",
+      "proofString": "eexists; eauto."
+    },
+    {
+      "statement": "(x : A) (s : x_mode) (o : mode) (l : location) (v : value) (Heq : lab x = Astore s o l v) (WX : true) : exists l0 : location, Some l = Some l0.",
+      "proofString": "eexists; eauto."
+    },
+    {
+      "statement": "(x : A) (ex : bool) (o : mode) (l : location) (v : value) (Heq : lab x = Aload ex o l v) (WX : true) : exists v0 : value, Some v = Some v0.",
+      "proofString": "eexists; eauto."
+    },
+    {
+      "statement": "(x : A) (ex : bool) (o : mode) (l : location) (v : value) (Heq : lab x = Aload ex o l v) (WX : true) : exists l0 : location, Some l = Some l0.",
+      "proofString": "eexists; eauto."
+    },
+    {
+      "statement": "(A : Type) (lab lab' : A -> label) (x : A) (U2V : match lab x with\n| Aload r1 o1 l1 _ =>\n    match lab' x with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lab' x with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lab' x with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend) (VAL : match lab x with\n| Aload _ _ _ v | Astore _ _ _ v => Some v\n| Afence _ => None\nend =\nmatch lab' x with\n| Aload _ _ _ v | Astore _ _ _ v => Some v\n| Afence _ => None\nend) : lab x = lab' x.",
+      "proofString": "desf; desf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : eq_dom (fun _ : A => True) (loc lab1) (loc lab2).",
+      "proofString": "by apply same_lab_u2v_dom_loc."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : eq_dom (fun _ : A => True) (mod lab1) (mod lab2).",
+      "proofString": "by apply same_lab_u2v_dom_mod."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : eq_dom (fun _ : A => True) (xmod lab1) (xmod lab2).",
+      "proofString": "by apply same_lab_u2v_dom_xmod."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_r lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_r lab2 a) ->\n(fun a : A => is_r lab1 a) ≡₁ (fun a : A => is_r lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_w lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_w lab2 a) ->\n(fun a : A => is_w lab1 a) ≡₁ (fun a : A => is_w lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_f lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_f lab2 a) ->\n(fun a : A => is_f lab1 a) ≡₁ (fun a : A => is_f lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => R_ex lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => R_ex lab2 a) ->\n(fun a : A => R_ex lab1 a) ≡₁ (fun a : A => R_ex lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_only_pln lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_only_pln lab2 a) ->\n(fun a : A => is_only_pln lab1 a) ≡₁ (fun a : A => is_only_pln lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_only_rlx lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_only_rlx lab2 a) ->\n(fun a : A => is_only_rlx lab1 a) ≡₁ (fun a : A => is_only_rlx lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_rlx lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_rlx lab2 a) ->\n(fun a : A => is_rlx lab1 a) ≡₁ (fun a : A => is_rlx lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_acq lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_acq lab2 a) ->\n(fun a : A => is_acq lab1 a) ≡₁ (fun a : A => is_acq lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_rel lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_rel lab2 a) ->\n(fun a : A => is_rel lab1 a) ≡₁ (fun a : A => is_rel lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_acqrel lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_acqrel lab2 a) ->\n(fun a : A => is_acqrel lab1 a) ≡₁ (fun a : A => is_acqrel lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_sc lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_sc lab2 a) ->\n(fun a : A => is_sc lab1 a) ≡₁ (fun a : A => is_sc lab2 a).",
+      "proofString": "relsf."
+    }
+  ]
+}

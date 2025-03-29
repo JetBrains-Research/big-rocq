@@ -1,0 +1,1 @@
+{"filePath":"/Users/andrei/MCS_Projects/coqPilotOther/CompCert/powerpc/ValueAOp.v","fileSamples":[{"statement":"(cond : condition) (m : mem) : cmatch (eval_condition cond nil m) (eval_static_condition cond nil).","proofString":"destruct cond; auto with va."}]}

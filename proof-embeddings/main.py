@@ -5,11 +5,11 @@ import numpy as np
 from omegaconf import OmegaConf
 import logging
 from torch.utils.data import DataLoader
+from transformers import BertTokenizer
 
-from src import load_json_dataset, split_dataset
+from src import load_dataset, split_dataset
 from src import TheoremDataset
 from src import train_loop, evaluate
-
 
 def main(cfg_path: str = "config.yaml"):
     cfg = OmegaConf.load(cfg_path)
@@ -36,16 +36,18 @@ def main(cfg_path: str = "config.yaml"):
     else:
         wandb.init(mode="disabled")
 
-    data = load_json_dataset(cfg.dataset_path)
+    data = load_dataset(cfg.dataset_path)
     train_data, val_data, test_data = split_dataset(data, cfg.train_split, cfg.val_split, cfg.test_split)
 
-    from transformers import BertTokenizer
     tokenizer = BertTokenizer.from_pretrained(cfg.model_name)
 
     train_dataset = TheoremDataset(
         train_data, tokenizer, cfg.max_seq_length, 
         cfg.threshold_pos, cfg.threshold_neg
     )
+
+    # train_dataset.preview_dataset(10)
+
     val_dataset = TheoremDataset(
         val_data, tokenizer, cfg.max_seq_length, 
         cfg.threshold_pos, cfg.threshold_neg
@@ -61,7 +63,7 @@ def main(cfg_path: str = "config.yaml"):
     )
 
     test_loader = DataLoader(test_dataset, batch_size=cfg.batch_size, shuffle=False)
-    test_results = evaluate(model, test_loader, device)
+    test_results = evaluate(model, test_loader, device, cfg.threshold_pos)
     
     wandb.log({
         "test_pearson": test_results["pearson"],
