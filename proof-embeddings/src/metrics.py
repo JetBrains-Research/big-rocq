@@ -34,6 +34,4 @@ def recall_at_k(
                 correct += 1
         results[k] = float(correct) / float(n)
 
-    # print(f"Recall at k:{results}")
-
     return results

@@ -30,7 +30,4 @@ class TripletMarginLoss(nn.Module):
         self.loss_fn = nn.TripletMarginLoss(margin=margin, p=2)
 
     def forward(self, anchor, positive, negative):
-        """
-        anchor, positive, negative: shape (batch, dim)
-        """
         return self.loss_fn(anchor, positive, negative)

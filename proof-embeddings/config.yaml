@@ -1,5 +1,5 @@
 project_name: "coq-theorem-embedding"
-experiment_name: "baseline-contrastive"
+experiment_name: "baseline-triplet"
 log_level: "INFO"
 
 dataset_path: "./data/"
@@ -12,12 +12,12 @@ max_seq_length: 128
 embedding_dim: 768
 freeze_bert: false        # If true, only train top layers
 
-loss_type: "contrastive"  # "contrastive" or "triplet"
-margin: 0.2
-threshold_pos: 0.2       # proof distance <= threshold -> positive
-threshold_neg: 0.5       # proof distance >= threshold -> negative
+loss_type: "triplet"  # "contrastive" or "triplet"
+margin: 0.25
+threshold_pos: 0.3       # proof distance <= threshold -> positive
+threshold_neg: 0.65       # proof distance >= threshold -> negative
 
-epochs: 6
+epochs: 20
 batch_size: 16
 learning_rate: 2e-5
 random_seed: 52
@@ -26,8 +26,8 @@ wandb:
   enabled: true
   project: "coq-embeddings"
   entity: "kozyrev-andreiii2016"
-  tags: ["baseline", "contrastive"]
+  tags: ["baseline", "triplet"]
 
 evaluation:
 #  recall_k: [1, 2, 3]
-  recall_k: [1, 5, 10]
+  recall_k: [1, 2, 3]

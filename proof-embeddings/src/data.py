@@ -7,7 +7,6 @@ from typing import List, Dict, Any
 logger = logging.getLogger(__name__)
 
 
-
 """
 Recursively load all JSON files in a directory and return
 the concatenated dataset.

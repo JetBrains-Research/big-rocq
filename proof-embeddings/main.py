@@ -11,6 +11,9 @@ from src import load_dataset, split_dataset
 from src import TheoremDataset
 from src import train_loop, evaluate
 
+logger = logging.getLogger(__name__)
+
+
 def main(cfg_path: str = "config.yaml"):
     cfg = OmegaConf.load(cfg_path)
     random.seed(cfg.random_seed)
@@ -37,33 +40,26 @@ def main(cfg_path: str = "config.yaml"):
         wandb.init(mode="disabled")
 
     data = load_dataset(cfg.dataset_path)
-    train_data, val_data, test_data = split_dataset(data, cfg.train_split, cfg.val_split, cfg.test_split)
-
     tokenizer = BertTokenizer.from_pretrained(cfg.model_name)
 
-    train_dataset = TheoremDataset(
-        train_data, tokenizer, cfg.max_seq_length, 
-        cfg.threshold_pos, cfg.threshold_neg
+    complete_dataset = TheoremDataset(
+        data, tokenizer, cfg.max_seq_length,
+        cfg.loss_type, cfg.threshold_pos, cfg.threshold_neg
     )
 
-    # train_dataset.preview_dataset(10)
-
-    val_dataset = TheoremDataset(
-        val_data, tokenizer, cfg.max_seq_length, 
-        cfg.threshold_pos, cfg.threshold_neg
-    )
+    train_dataset, val_dataset, test_dataset = split_dataset(complete_dataset.dataset_samples, cfg.train_split, cfg.val_split, cfg.test_split)
+    logger.info(f"Created train, validation, and test datasets with sizes: {len(train_dataset)}, {len(val_dataset)}, {len(test_dataset)}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = train_loop(train_dataset, val_dataset, cfg, device)
     
     model.to(device)
-    test_dataset = TheoremDataset(
-        test_data, tokenizer, cfg.max_seq_length, 
-        cfg.threshold_pos, cfg.threshold_neg
-    )
 
     test_loader = DataLoader(test_dataset, batch_size=cfg.batch_size, shuffle=False)
-    test_results = evaluate(model, test_loader, device, cfg.threshold_pos)
+
+    logger.info("Evaluating on test set of size: %d", len(test_dataset))
+
+    test_results = evaluate(model, test_loader, device, cfg.threshold_pos, cfg.loss_type, cfg.evaluation.recall_k)
     
     wandb.log({
         "test_pearson": test_results["pearson"],
