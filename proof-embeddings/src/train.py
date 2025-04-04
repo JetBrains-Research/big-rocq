@@ -67,7 +67,9 @@ def evaluate(
     device,
     pos_threshold,
     k_values,
-    f_score_beta=1.0
+    f_score_beta=1.0,
+    loss_function=None,
+    triplet_dataloader=None
 ):
     model.eval()
 
@@ -87,7 +89,7 @@ def evaluate(
         emb_j = model(input_ids_j, attn_j)
 
         dist_golden = batch["dist"].float()
-        dist_pred = torch.norm(emb_i - emb_j, p=2, dim=1)
+        dist_pred = 1 - torch.nn.functional.cosine_similarity(emb_i, emb_j)
 
         dist_preds.extend(dist_pred.cpu().numpy().tolist())
         dist_true.extend(dist_golden.cpu().numpy().tolist())
@@ -126,8 +128,7 @@ def evaluate(
     fs_at_k = f_scores(recs, precisions, k_values, f_score_beta)
 
     pearson_corr, p_pearson, spearman_corr, p_spearman = compute_correlation_scores(dist_preds, dist_true)
-
-    return {
+    metrics = {
         "pearson": pearson_corr,
         "p_pearson": p_pearson,
         "spearman": spearman_corr,
@@ -137,18 +138,44 @@ def evaluate(
         "f_score": fs_at_k
     }
 
+    if loss_function is not None and triplet_dataloader is not None:
+        total_loss = 0.0
+        for batch in tqdm(triplet_dataloader, desc="Eval Loss Iter", leave=False):
+            input_ids_anchor = batch["input_ids_anchor"].to(device)
+            attn_anchor = batch["attention_mask_anchor"].to(device)
+
+            input_ids_pos = batch["input_ids_pos_sample"].to(device)
+            attn_pos = batch["attention_mask_pos_sample"].to(device)
+
+            input_ids_neg = batch["input_ids_neg_sample"].to(device)
+            attn_neg = batch["attention_mask_neg_sample"].to(device)
+
+            emb_anchor = model(input_ids_anchor, attn_anchor)
+            emb_pos = model(input_ids_pos, attn_pos)
+            emb_neg = model(input_ids_neg, attn_neg)
+
+            loss = loss_function(emb_anchor, emb_pos, emb_neg)
+            total_loss += loss.item()
+
+        metrics["val_loss"] = total_loss / len(triplet_dataloader)
+
+    return metrics
+
 
 def train_loop(
     train_dataset,
     val_dataset,
+    val_dataset_triplet,
     cfg,
-    device
+    device,
+    vocab_size
 ):
     model = BERTStatementEmbedder(
         model_name=cfg.model_name,
         freeze_bert=cfg.freeze_bert,
         embedding_dim=cfg.embedding_dim
     )
+
     model.to(device)
 
     loss_fn = TripletMarginLoss(margin=cfg.margin).to(device)
@@ -157,6 +184,7 @@ def train_loop(
 
     train_loader = DataLoader(train_dataset, batch_size=cfg.batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=cfg.batch_size, shuffle=False)
+    val_loader_triplet = DataLoader(val_dataset_triplet, batch_size=cfg.batch_size, shuffle=False)
 
     logger.info(f"Logging pre-training metrics")
     metrics_val = evaluate(model, val_loader, device, cfg.threshold_pos, cfg.evaluation.k_values, cfg.evaluation.f_score_beta)
@@ -168,12 +196,13 @@ def train_loop(
     for epoch in range(cfg.epochs):
         # eval_freq = 100 if epoch == 0 else None
         train_loss = train_one_epoch(model, loss_fn, train_loader, optimizer, device, cfg, val_loader)
-        metrics_val = evaluate(model, val_loader, device, cfg.threshold_pos, cfg.evaluation.k_values, cfg.evaluation.f_score_beta)
+        metrics_val = evaluate(model, val_loader, device, cfg.threshold_pos, cfg.evaluation.k_values, cfg.evaluation.f_score_beta, loss_fn, val_loader_triplet)
 
         wandb.log({
             "train_loss": train_loss,
             "val_pearson": metrics_val["pearson"],
-            "val_spearman": metrics_val["spearman"]
+            "val_spearman": metrics_val["spearman"],
+            "val_loss": metrics_val.get("val_loss", None)
         })
 
         for k in cfg.evaluation.k_values:

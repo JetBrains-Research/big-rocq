@@ -1,5 +1,9 @@
+import torch
 import torch.nn as nn
 from transformers import BertModel
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class BERTStatementEmbedder(nn.Module):
@@ -24,3 +28,19 @@ class BERTStatementEmbedder(nn.Module):
         if self.projection is not None:
             cls_embed = self.projection(cls_embed)
         return cls_embed
+
+
+class RulerModel(nn.Module):
+    def __init__(self, model_name: str, freeze_bert: bool = False, embedding_dim: int = 768):
+        super().__init__()
+        self.bert = BERTStatementEmbedder(model_name, freeze_bert, embedding_dim)
+        self.distance_layer = nn.Linear(2 * embedding_dim, 1)
+
+    def forward(self, input_ids_x, attention_mask_x, input_ids_y, attention_mask_y):
+        emb_x = self.bert(input_ids_x, attention_mask_x)
+        emb_y = self.bert(input_ids_y, attention_mask_y)
+
+        combined_emb = torch.cat((emb_x, emb_y), dim=1)
+        distance = self.distance_layer(combined_emb)
+
+        return distance

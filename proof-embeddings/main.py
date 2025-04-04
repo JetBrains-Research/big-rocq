@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from transformers import BertTokenizer
 
 from src import load_dataset, split_dataset
-from src import TheoremDataset, ValidationTheoremDataset
+from src import TheoremDataset, PairTheoremDataset
 from src import train_loop, evaluate
 
 logger = logging.getLogger(__name__)
@@ -48,12 +48,19 @@ def main(cfg_path: str = "config.yaml"):
         cfg.threshold_pos, cfg.threshold_neg,
         cfg.samples_from_single_anchor
     )
-    val_dataset = ValidationTheoremDataset(
+    # For correlation and recall calc during eval
+    val_dataset = PairTheoremDataset(
         val_data, tokenizer, cfg.max_seq_length,
         cfg.threshold_pos, cfg.threshold_neg,
         cfg.samples_from_single_anchor
     )
-    test_dataset = ValidationTheoremDataset(
+    # For validation loss calc
+    val_dataset_triplet = TheoremDataset(
+        val_data, tokenizer, cfg.max_seq_length,
+        cfg.threshold_pos, cfg.threshold_neg,
+        cfg.samples_from_single_anchor
+    )
+    test_dataset = PairTheoremDataset(
         test_data, tokenizer, cfg.max_seq_length,
         cfg.threshold_pos, cfg.threshold_neg,
         cfg.samples_from_single_anchor
@@ -62,7 +69,7 @@ def main(cfg_path: str = "config.yaml"):
     logger.info(f"Created train, validation, and test datasets with sizes: {len(train_dataset)}, {len(val_dataset)}, {len(test_dataset)}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = train_loop(train_dataset, val_dataset, cfg, device)
+    model = train_loop(train_dataset, val_dataset, val_dataset_triplet, cfg, device, tokenizer.vocab_size)
     
     model.to(device)
 

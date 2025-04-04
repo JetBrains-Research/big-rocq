@@ -176,7 +176,7 @@ class TheoremDataset(Dataset):
         """)
 
 
-class ValidationTheoremDataset(Dataset):
+class PairTheoremDataset(Dataset):
     def __init__(
         self,
         data: List[Dict[str, Any]],
