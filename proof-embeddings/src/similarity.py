@@ -1,5 +1,6 @@
 from Levenshtein import distance
 from typing import List
+import random
 
 
 def split_proof_into_sentences(proof_text: str) -> List[str]:
@@ -22,6 +23,18 @@ def normalized_string_distance(s1: str, s2: str) -> float:
     return distance(s1, s2) / float(max_len)
 
 
+def add_small_noize(dist: float) -> float:
+    max_noize = 0.05
+    min_dist = 0.001
+
+    if dist < min_dist:
+        noise = random.uniform(0.0, max_noize)
+        return noise
+
+    return dist
+
+
+# TODO: When distance = 0 add random noise to the distance
 def proof_distance(proof1: str, proof2: str) -> float:
     """
     Levenshtein distance at the sequence level, but:
@@ -57,4 +70,7 @@ def proof_distance(proof1: str, proof2: str) -> float:
                 dp[i-1][j-1] + cost_sub
             )
 
-    return dp[n1][n2] / float(max_len)
+    proof_dist = dp[n1][n2] / float(max_len)
+    return add_small_noize(proof_dist)
+
+    # return proof_dist

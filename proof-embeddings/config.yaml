@@ -1,24 +1,27 @@
 project_name: "coq-theorem-embedding"
-experiment_name: "baseline-triplet"
+experiment_name: "baseline-triplet-imm-1000"
 log_level: "INFO"
 
-dataset_path: "./data/"
+dataset_path: "./data/imm/"
+samples_from_single_anchor: 1000
 train_split: 0.8
-val_split: 0.1
-test_split: 0.1
+val_split: 0.15
+test_split: 0.05
 
 model_name: "prajjwal1/bert-tiny"
 max_seq_length: 128
 embedding_dim: 768
-freeze_bert: false        # If true, only train top layers
+# If true, only train top layers
+freeze_bert: true
 
-loss_type: "triplet"  # "contrastive" or "triplet"
 margin: 0.25
-threshold_pos: 0.3       # proof distance <= threshold -> positive
-threshold_neg: 0.65       # proof distance >= threshold -> negative
+# proof distance <= threshold -> positive
+threshold_pos: 0.3
+# proof distance >= threshold -> negative
+threshold_neg: 0.65
 
 epochs: 20
-batch_size: 16
+batch_size: 32
 learning_rate: 2e-5
 random_seed: 52
 
@@ -29,5 +32,6 @@ wandb:
   tags: ["baseline", "triplet"]
 
 evaluation:
-#  recall_k: [1, 2, 3]
-  recall_k: [1, 2, 3]
+  # For precision@k and recall@k
+  k_values: [3, 5, 10]
+  f_score_beta: 1
