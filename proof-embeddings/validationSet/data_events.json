@@ -1,0 +1,265 @@
+{
+  "filePath": "/Users/andrei/MCS_Projects/coqPilotOther/bigRocq/dataset/imm/src/basic/Events.v",
+  "fileSamples": [
+    {
+      "statement": "(x y z : A) (H : loc x = loc y) (H0 : loc y = loc z) : loc x = loc z.",
+      "proofString": "by rewrite H."
+    },
+    {
+      "statement": "(x : A) (s : x_mode) (o : mode) (l : location) (v : value) (Heq : lab x = Astore s o l v) (WX : true) : exists v0 : value, Some v = Some v0.",
+      "proofString": "eexists; eauto."
+    },
+    {
+      "statement": "(x : A) (s : x_mode) (o : mode) (l : location) (v : value) (Heq : lab x = Astore s o l v) (WX : true) : exists l0 : location, Some l = Some l0.",
+      "proofString": "eexists; eauto."
+    },
+    {
+      "statement": "(x : A) (ex : bool) (o : mode) (l : location) (v : value) (Heq : lab x = Aload ex o l v) (WX : true) : exists v0 : value, Some v = Some v0.",
+      "proofString": "eexists; eauto."
+    },
+    {
+      "statement": "(x : A) (ex : bool) (o : mode) (l : location) (v : value) (Heq : lab x = Aload ex o l v) (WX : true) : exists l0 : location, Some l = Some l0.",
+      "proofString": "eexists; eauto."
+    },
+    {
+      "statement": "(A : Type) (lab lab' : A -> label) (x : A) (U2V : match lab x with\n| Aload r1 o1 l1 _ =>\n    match lab' x with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lab' x with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lab' x with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend) (VAL : match lab x with\n| Aload _ _ _ v | Astore _ _ _ v => Some v\n| Afence _ => None\nend =\nmatch lab' x with\n| Aload _ _ _ v | Astore _ _ _ v => Some v\n| Afence _ => None\nend) : lab x = lab' x.",
+      "proofString": "desf; desf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : eq_dom (fun _ : A => True) (loc lab1) (loc lab2).",
+      "proofString": "by apply same_lab_u2v_dom_loc."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : eq_dom (fun _ : A => True) (mod lab1) (mod lab2).",
+      "proofString": "by apply same_lab_u2v_dom_mod."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : eq_dom (fun _ : A => True) (xmod lab1) (xmod lab2).",
+      "proofString": "by apply same_lab_u2v_dom_xmod."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_r lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_r lab2 a) ->\n(fun a : A => is_r lab1 a) ≡₁ (fun a : A => is_r lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_w lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_w lab2 a) ->\n(fun a : A => is_w lab1 a) ≡₁ (fun a : A => is_w lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_f lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_f lab2 a) ->\n(fun a : A => is_f lab1 a) ≡₁ (fun a : A => is_f lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => R_ex lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => R_ex lab2 a) ->\n(fun a : A => R_ex lab1 a) ≡₁ (fun a : A => R_ex lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_only_pln lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_only_pln lab2 a) ->\n(fun a : A => is_only_pln lab1 a) ≡₁ (fun a : A => is_only_pln lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_only_rlx lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_only_rlx lab2 a) ->\n(fun a : A => is_only_rlx lab1 a) ≡₁ (fun a : A => is_only_rlx lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_rlx lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_rlx lab2 a) ->\n(fun a : A => is_rlx lab1 a) ≡₁ (fun a : A => is_rlx lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_acq lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_acq lab2 a) ->\n(fun a : A => is_acq lab1 a) ≡₁ (fun a : A => is_acq lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_rel lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_rel lab2 a) ->\n(fun a : A => is_rel lab1 a) ≡₁ (fun a : A => is_rel lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_acqrel lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_acqrel lab2 a) ->\n(fun a : A => is_acqrel lab1 a) ≡₁ (fun a : A => is_acqrel lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_sc lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_sc lab2 a) ->\n(fun a : A => is_sc lab1 a) ≡₁ (fun a : A => is_sc lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_ra lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_ra lab2 a) ->\n(fun a : A => is_ra lab1 a) ≡₁ (fun a : A => is_ra lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_xacq lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_xacq lab2 a) ->\n(fun a : A => is_xacq lab1 a) ≡₁ (fun a : A => is_xacq lab2 a).",
+      "proofString": "relsf."
+    },
+    {
+      "statement": "(SAME : same_lab_u2v) : restr_rel (fun _ : A => True) (same_loc lab1)\n≡ restr_rel (fun _ : A => True) (same_loc lab2) ->\nsame_loc lab1 ≡ same_loc lab2.",
+      "proofString": "by rewrite !restr_full."
+    },
+    {
+      "statement": "(A : Type) (lab1 lab2 : A -> label) (S1 : same_lab_u2v lab1 lab2) (e : A) (EE : True) : same_label_u2v (lab2 e) (lab1 e).",
+      "proofString": "specialize (S1 e EE).\nunfold same_label_u2v in *.\ndesf; desf."
+    },
+    {
+      "statement": "(A : Type) (lab1 lab2 : A -> label) (e : A) (S1 : same_label_u2v (lab1 e) (lab2 e)) (EE : True) : same_label_u2v (lab2 e) (lab1 e).",
+      "proofString": "unfold same_label_u2v in *.\ndesf; desf."
+    },
+    {
+      "statement": "(A : Type) (lab1 lab2 : A -> label) (e : A) (S1 : match lab1 e with\n| Aload r1 o1 l1 _ =>\n    match lab2 e with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lab2 e with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lab2 e with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend) (EE : True) : match lab2 e with\n| Aload r1 o1 l1 _ =>\n    match lab1 e with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lab1 e with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lab1 e with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend.",
+      "proofString": "desf; desf."
+    },
+    {
+      "statement": "(A : Type) (s : A -> Prop) (lab1 lab2 : A -> label) (S1 : forall e : A, True -> same_label_u2v (lab1 e) (lab2 e)) : forall e : A, s e -> same_label_u2v (lab1 e) (lab2 e).",
+      "proofString": "ins.\nby apply S1."
+    },
+    {
+      "statement": "(A : Type) (s : A -> Prop) (lab1 lab2 : A -> label) (S1 : forall e0 : A, True -> same_label_u2v (lab1 e0) (lab2 e0)) (e : A) (EE : s e) : same_label_u2v (lab1 e) (lab2 e).",
+      "proofString": "by apply S1."
+    },
+    {
+      "statement": "(A : Type) (s s' : A -> Prop) (lab lab' : A -> label) (SS : s' ⊆₁ s) (S1 : same_lab_u2v_dom s lab lab') : forall e : A, s' e -> same_label_u2v (lab e) (lab' e).",
+      "proofString": "ins.\napply S1.\nby apply SS."
+    },
+    {
+      "statement": "(A : Type) (s s' : A -> Prop) (lab lab' : A -> label) (SS : s' ⊆₁ s) (S1 : same_lab_u2v_dom s lab lab') (e : A) (EE : s' e) : same_label_u2v (lab e) (lab' e).",
+      "proofString": "apply S1.\nby apply SS."
+    },
+    {
+      "statement": "(A : Type) (s s' : A -> Prop) (lab lab' : A -> label) (SS : s' ⊆₁ s) (S1 : same_lab_u2v_dom s lab lab') (e : A) (EE : s' e) : s e.",
+      "proofString": "by apply SS."
+    },
+    {
+      "statement": "(lbl1 lbl2 lbl3 : label) (S1 : match lbl1 with\n| Aload r1 o1 l1 _ =>\n    match lbl2 with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lbl2 with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lbl2 with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend) (S2 : match lbl2 with\n| Aload r1 o1 l1 _ =>\n    match lbl3 with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lbl3 with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lbl3 with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend) : match lbl1 with\n| Aload r1 o1 l1 _ =>\n    match lbl3 with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lbl3 with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lbl3 with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend.",
+      "proofString": "desf; desf."
+    },
+    {
+      "statement": "(lbl1 lbl2 : label) (S1 : match lbl1 with\n| Aload r1 o1 l1 _ =>\n    match lbl2 with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lbl2 with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lbl2 with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend) : match lbl2 with\n| Aload r1 o1 l1 _ =>\n    match lbl1 with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lbl1 with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lbl1 with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend.",
+      "proofString": "desf; desf."
+    },
+    {
+      "statement": "(A : Type) (s : A -> Prop) (lab1 lab2 lab3 : A -> label) (S1 : same_lab_u2v_dom s lab1 lab2) (S2 : same_lab_u2v_dom s lab2 lab3) (e : A) (EE : s e) : same_label_u2v (lab1 e) (lab3 e).",
+      "proofString": "specialize (S1 e EE).\nspecialize (S2 e EE).\neapply same_label_u2v_trans; eauto."
+    },
+    {
+      "statement": "(A : Type) (s : A -> Prop) (lab1 lab2 lab3 : A -> label) (e : A) (S1 : same_label_u2v (lab1 e) (lab2 e)) (S2 : same_lab_u2v_dom s lab2 lab3) (EE : s e) : same_label_u2v (lab1 e) (lab3 e).",
+      "proofString": "specialize (S2 e EE).\neapply same_label_u2v_trans; eauto."
+    },
+    {
+      "statement": "(A : Type) (s : A -> Prop) (lab1 lab2 lab3 : A -> label) (e : A) (S1 : same_label_u2v (lab1 e) (lab2 e)) (S2 : same_label_u2v (lab2 e) (lab3 e)) (EE : s e) : same_label_u2v (lab1 e) (lab3 e).",
+      "proofString": "eapply same_label_u2v_trans; eauto."
+    },
+    {
+      "statement": "(A : Type) (s : A -> Prop) (lab1 lab2 : A -> label) (S2 : same_lab_u2v_dom s lab1 lab2) (e : A) (EE : s e) : same_label_u2v (lab2 e) (lab1 e).",
+      "proofString": "specialize (S2 e EE).\nby apply same_label_u2v_comm."
+    },
+    {
+      "statement": "(A : Type) (s : A -> Prop) (lab1 lab2 : A -> label) (e : A) (S2 : same_label_u2v (lab1 e) (lab2 e)) (EE : s e) : same_label_u2v (lab2 e) (lab1 e).",
+      "proofString": "by apply same_label_u2v_comm."
+    },
+    {
+      "statement": "(x y z : actid) (H : match x with\n| InitEvent _ =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend) (H0 : match y with\n| InitEvent _ =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend) : match x with\n| InitEvent _ =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend.",
+      "proofString": "destruct x,y,z; ins; desf; splits; eauto.\nby rewrite H2."
+    },
+    {
+      "statement": "(index0 index1 : nat) (thread1 : thread_id) (index2 : nat) (H2 : index0 < index1) (H1 : index1 < index2) : index0 < index2.",
+      "proofString": "by rewrite H2."
+    },
+    {
+      "statement": "(x : actid) (H : match x with\n| InitEvent _ =>\n    match x with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match x with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend) : False.",
+      "proofString": "destruct x; firstorder.\nlia."
+    },
+    {
+      "statement": "(thread : thread_id) (index0 : nat) (H : thread = thread) (H0 : index0 < index0) : False.",
+      "proofString": "lia."
+    },
+    {
+      "statement": "(x y z : actid) (N : ~ is_init x) (NEQ : index y <> index z) (XY : match x with\n| InitEvent _ =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend) (XZ : match x with\n| InitEvent _ =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend) : match y with\n| InitEvent _ =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend \\/\nmatch z with\n| InitEvent _ =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend.",
+      "proofString": "destruct x,y,z; ins; desf.\ncut(index1 < index2 \\/ index2 < index1).\ntauto.\nlia."
+    },
+    {
+      "statement": "(index0 index1 : nat) (thread1 : thread_id) (index2 : nat) (N : ~ false) (NEQ : index1 <> index2) (XY0 : index0 < index1) (XZ0 : index0 < index2) : thread1 = thread1 /\\ index1 < index2 \\/ thread1 = thread1 /\\ index2 < index1.",
+      "proofString": "cut(index1 < index2 \\/ index2 < index1).\ntauto.\nlia."
+    },
+    {
+      "statement": "(index0 index1 : nat) (thread1 : thread_id) (index2 : nat) (N : ~ false) (NEQ : index1 <> index2) (XY0 : index0 < index1) (XZ0 : index0 < index2) : index1 < index2 \\/ index2 < index1 ->\nthread1 = thread1 /\\ index1 < index2 \\/ thread1 = thread1 /\\ index2 < index1.",
+      "proofString": "tauto."
+    },
+    {
+      "statement": "(index0 index1 : nat) (thread1 : thread_id) (index2 : nat) (N : ~ false) (NEQ : index1 <> index2) (XY0 : index0 < index1) (XZ0 : index0 < index2) : index1 < index2 \\/ index2 < index1.",
+      "proofString": "lia."
+    },
+    {
+      "statement": "(x y z : actid) (NEQ : index y <> index z) (XY : match y with\n| InitEvent _ =>\n    match x with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match x with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend) (XZ : match z with\n| InitEvent _ =>\n    match x with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match x with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend) : match y with\n| InitEvent _ =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend \\/\nmatch z with\n| InitEvent _ =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend.",
+      "proofString": "destruct x,y,z; ins; desf; eauto.\ncut(index1 < index2 \\/ index2 < index1).\ntauto.\nlia."
+    },
+    {
+      "statement": "(thread : thread_id) (index0 index1 index2 : nat) (NEQ : index1 <> index2) (XY0 : index1 < index0) (XZ0 : index2 < index0) : thread = thread /\\ index1 < index2 \\/ thread = thread /\\ index2 < index1.",
+      "proofString": "cut(index1 < index2 \\/ index2 < index1).\ntauto.\nlia."
+    },
+    {
+      "statement": "(thread : thread_id) (index0 index1 index2 : nat) (NEQ : index1 <> index2) (XY0 : index1 < index0) (XZ0 : index2 < index0) : index1 < index2 \\/ index2 < index1 ->\nthread = thread /\\ index1 < index2 \\/ thread = thread /\\ index2 < index1.",
+      "proofString": "tauto."
+    },
+    {
+      "statement": "(thread : thread_id) (index0 index1 index2 : nat) (NEQ : index1 <> index2) (XY0 : index1 < index0) (XZ0 : index2 < index0) : index1 < index2 \\/ index2 < index1.",
+      "proofString": "lia."
+    },
+    {
+      "statement": "forall x y : actid,\nmatch x with\n| InitEvent _ => tid_init\n| ThreadEvent i _ => i\nend = match y with\n      | InitEvent _ => tid_init\n      | ThreadEvent i _ => i\n      end ->\n((x = y \\/\n  match x with\n  | InitEvent _ =>\n      match y with\n      | InitEvent _ => False\n      | ThreadEvent _ _ => True\n      end\n  | ThreadEvent t i =>\n      match y with\n      | InitEvent _ => False\n      | ThreadEvent t' i' => t = t' /\\ i < i'\n      end\n  end) \\/\n match y with\n | InitEvent _ =>\n     match x with\n     | InitEvent _ => False\n     | ThreadEvent _ _ => True\n     end\n | ThreadEvent t i =>\n     match x with\n     | InitEvent _ => False\n     | ThreadEvent t' i' => t = t' /\\ i < i'\n     end\n end) \\/\nmatch x with\n| InitEvent _ => true\n| ThreadEvent _ _ => false\nend /\\ match y with\n       | InitEvent _ => true\n       | ThreadEvent _ _ => false\n       end.",
+      "proofString": "ins; destruct x, y; desf; eauto.\ncut(index0 < index1 \\/ index1 < index0 \\/ index0 = index1).\nby ins; desf; eauto.\nlia."
+    },
+    {
+      "statement": "(index0 : nat) (thread0 : thread_id) (index1 : nat) : ((ThreadEvent thread0 index0 = ThreadEvent thread0 index1 \\/\n  thread0 = thread0 /\\ index0 < index1) \\/\n thread0 = thread0 /\\ index1 < index0) \\/ false /\\ false.",
+      "proofString": "cut(index0 < index1 \\/ index1 < index0 \\/ index0 = index1).\nby ins; desf; eauto.\nlia."
+    },
+    {
+      "statement": "(index0 : nat) (thread0 : thread_id) (index1 : nat) : index0 < index1 \\/ index1 < index0 \\/ index0 = index1 ->\n((ThreadEvent thread0 index0 = ThreadEvent thread0 index1 \\/\n  thread0 = thread0 /\\ index0 < index1) \\/\n thread0 = thread0 /\\ index1 < index0) \\/ false /\\ false.",
+      "proofString": "by ins; desf; eauto."
+    },
+    {
+      "statement": "(index0 : nat) (thread0 : thread_id) (index1 : nat) : index0 < index1 \\/ index1 < index0 \\/ index0 = index1.",
+      "proofString": "lia."
+    },
+    {
+      "statement": "(ext_sb^? ∪ ext_sb⁻¹\n ∪ (fun a : actid => is_init a) × (fun a : actid => is_init a))\n⨾ ⦗set_compl (fun a : actid => is_init a)⦘ ⊆ ext_sb^? ∪ ext_sb⁻¹.",
+      "proofString": "unfold cross_rel.\nbasic_solver 12."
+    },
+    {
+      "statement": "(ext_sb^? ∪ ext_sb⁻¹ ∪ (fun a b : actid => is_init a /\\ is_init b))\n⨾ ⦗set_compl (fun a : actid => is_init a)⦘ ⊆ ext_sb^? ∪ ext_sb⁻¹.",
+      "proofString": "basic_solver 12."
+    },
+    {
+      "statement": "forall x : actid, is_init x -> tid x = tid_init.",
+      "proofString": "unfold is_init.\nins.\ndesf."
+    },
+    {
+      "statement": "forall x : actid,\nmatch x with\n| InitEvent _ => true\n| ThreadEvent _ _ => false\nend -> tid x = tid_init.",
+      "proofString": "ins.\ndesf."
+    },
+    {
+      "statement": "(x : actid) (H : match x with\n| InitEvent _ => true\n| ThreadEvent _ _ => false\nend) : tid x = tid_init.",
+      "proofString": "desf."
+    },
+    {
+      "statement": "(fun a : actid => is_init a) × set_compl (fun a : actid => is_init a)\n⊆ (fun a b : actid =>\n   match a with\n   | InitEvent _ =>\n       match b with\n       | InitEvent _ => False\n       | ThreadEvent _ _ => True\n       end\n   | ThreadEvent t i =>\n       match b with\n       | InitEvent _ => False\n       | ThreadEvent t' i' => t = t' /\\ i < i'\n       end\n   end).",
+      "proofString": "basic_solver."
+    },
+    {
+      "statement": "(s : forall _ : actid, Prop) (thread : BinNums.positive) : @set_subset actid s\n  (@set_union actid\n     (@set_inter actid s\n        (fun x : actid => not (@eq BinNums.positive (tid x) thread)))\n     (@set_inter actid s\n        (fun x : actid => @eq BinNums.positive (tid x) thread))).",
+      "proofString": "rewrite <- set_inter_union_r.\nunfolder.\nins.\nsplits; auto.\ndestruct (classic (tid x = thread)); eauto."
+    },
+    {
+      "statement": "(s : forall _ : actid, Prop) (thread : BinNums.positive) : @set_subset actid s\n  (@set_inter actid s\n     (@set_union actid\n        (fun x : actid => not (@eq BinNums.positive (tid x) thread))\n        (fun x : actid => @eq BinNums.positive (tid x) thread))).",
+      "proofString": "unfolder.\nins.\nsplits; auto.\ndestruct (classic (tid x = thread)); eauto."
+    },
+    {
+      "statement": "(s : forall _ : actid, Prop) (thread : BinNums.positive) : forall (x : actid) (_ : s x),\nand (s x)\n  (or (not (@eq BinNums.positive (tid x) thread))\n     (@eq BinNums.positive (tid x) thread)).",
+      "proofString": "ins.\nsplits; auto.\ndestruct (classic (tid x = thread)); eauto."
+    },
+    {
+      "statement": "(s : forall _ : actid, Prop) (thread : BinNums.positive) (x : actid) (H : s x) : and (s x)\n  (or (not (@eq BinNums.positive (tid x) thread))\n     (@eq BinNums.positive (tid x) thread)).",
+      "proofString": "splits; auto.\ndestruct (classic (tid x = thread)); eauto."
+    },
+    {
+      "statement": "(s : forall _ : actid, Prop) (thread : BinNums.positive) (x : actid) (H : s x) : or (not (@eq BinNums.positive (tid x) thread))\n  (@eq BinNums.positive (tid x) thread).",
+      "proofString": "destruct (classic (tid x = thread)); eauto."
+    }
+  ]
+}

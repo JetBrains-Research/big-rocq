@@ -5,11 +5,12 @@ import numpy as np
 from omegaconf import OmegaConf
 import logging
 from torch.utils.data import DataLoader
-from transformers import BertTokenizer
+from transformers import RobertaTokenizer
 
 from src import load_dataset, split_dataset
 from src import TheoremDataset, PairTheoremDataset
 from src import train_loop, evaluate
+from src.dataset import RankingDataset
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +42,9 @@ def main(cfg_path: str = "config.yaml"):
 
     data = load_dataset(cfg.dataset_path)
     train_data, val_data, test_data = split_dataset(data, cfg.train_split, cfg.val_split, cfg.test_split)
-    tokenizer = BertTokenizer.from_pretrained(cfg.model_name)
+    tokenizer = RobertaTokenizer.from_pretrained(cfg.model_name)
 
-    train_dataset = TheoremDataset(
+    train_dataset = PairTheoremDataset(
         train_data, tokenizer, cfg.max_seq_length,
         cfg.threshold_pos, cfg.threshold_neg,
         cfg.samples_from_single_anchor
@@ -55,21 +56,27 @@ def main(cfg_path: str = "config.yaml"):
         cfg.samples_from_single_anchor
     )
     # For validation loss calc
-    val_dataset_triplet = TheoremDataset(
-        val_data, tokenizer, cfg.max_seq_length,
-        cfg.threshold_pos, cfg.threshold_neg,
-        cfg.samples_from_single_anchor
-    )
+    # val_dataset_triplet = TheoremDataset(
+    #     val_data, tokenizer, cfg.max_seq_length,
+    #     cfg.threshold_pos, cfg.threshold_neg,
+    #     cfg.samples_from_single_anchor
+    # )
     test_dataset = PairTheoremDataset(
         test_data, tokenizer, cfg.max_seq_length,
         cfg.threshold_pos, cfg.threshold_neg,
         cfg.samples_from_single_anchor
     )
 
+    ranking_validation_dataset = RankingDataset(
+        cfg.max_seq_length, tokenizer,
+        cfg.rankin_ds_path_statements,
+        cfg.rankin_ds_path_references
+    )
+
     logger.info(f"Created train, validation, and test datasets with sizes: {len(train_dataset)}, {len(val_dataset)}, {len(test_dataset)}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = train_loop(train_dataset, val_dataset, val_dataset_triplet, cfg, device, tokenizer.vocab_size)
+    model = train_loop(train_dataset, val_dataset, cfg, device, ranking_validation_dataset)
     
     model.to(device)
 
@@ -77,7 +84,7 @@ def main(cfg_path: str = "config.yaml"):
 
     logger.info("Evaluating on test set of size: %d", len(test_dataset))
 
-    test_results = evaluate(model, test_loader, device, cfg.threshold_pos, cfg.evaluation.k_values, cfg.evaluation.f_score_beta)
+    test_results = evaluate(model, test_loader, device, cfg.threshold_pos, cfg.evaluation.k_values, ranking_validation_dataset, cfg.evaluation.f_score_beta)
     
     wandb.log({
         "test_pearson": test_results["pearson"],

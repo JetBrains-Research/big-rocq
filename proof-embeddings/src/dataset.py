@@ -1,4 +1,5 @@
-from os import abort
+import json
+import torch.nn as nn
 
 from torch.utils.data import Dataset
 from typing import List, Dict, Any, Tuple
@@ -7,6 +8,8 @@ import random
 import logging
 from dataclasses import dataclass
 
+from . import load_dataset
+from .data import load_single_file_json_dataset
 from .similarity import proof_distance
 
 logger = logging.getLogger(__name__)
@@ -287,3 +290,98 @@ class PairTheoremDataset(Dataset):
                 dist_dict[i].append((j, dist))
 
         return dist_dict
+
+
+class RankingDataset:
+    def __init__(
+        self,
+        max_seq_length: int,
+        tokenizer,
+        all_statements_path: str,
+        reference_premises_path: str,
+    ):
+        data = load_single_file_json_dataset(all_statements_path)
+        logger.info("Loaded dataset with %d statements", len(data))
+        self.statements: List[str] = [d["statement"] for d in data]
+        self.proofs: List[str] = [d["proofString"] for d in data]
+
+        def encode_statement(st: str):
+            encoded = tokenizer(
+                st,
+                padding="max_length",
+                truncation=True,
+                max_length=max_seq_length,
+                return_tensors="pt"
+            )
+            encoded["original"] = st
+            return encoded
+
+        self.encoded_statements = [
+            encode_statement(s)
+            for s in self.statements
+        ]
+
+        reference_promises = json.load(open(reference_premises_path, "r"))
+        self.reference_premises = reference_promises["references"]
+        self.cliques = [p["clique"] for p in self.reference_premises]
+        self.cliques = [
+            [encode_statement(s) for s in clique]
+            for clique in self.cliques
+        ]
+
+    def get_accuracy_score(
+        self,
+        model: nn.Module,
+        device,
+        top_k: int = 6
+    ) -> float:
+        scores = []
+        for clique in self.cliques:
+            for statement in clique:
+                predicted_distances = []
+                for other_theorem in self.encoded_statements:
+                    if statement['original'] == other_theorem['original']:
+                        continue
+
+                    dist = model(
+                        statement["input_ids"].to(device),
+                        statement["attention_mask"].to(device),
+                        other_theorem["input_ids"].to(device),
+                        other_theorem["attention_mask"].to(device)
+                    )
+                    predicted_distances.append([
+                        dist.item(),
+                        other_theorem
+                    ])
+
+                predicted_distances.sort(key=lambda x: x[0])
+                other_clique_statements = [
+                    x["original"]
+                    for x in clique
+                ]
+                other_clique_statements.remove(statement["original"])
+
+                top_k_predicted_statements = [
+                    x[1]["original"]
+                    for x in predicted_distances[:top_k]
+                ]
+
+                logger.info(f"Anchor: {statement['original']}")
+                logger.info(
+                    f"Predicted statements: {top_k_predicted_statements}"
+                )
+                logger.info(
+                    f"Expected statements: {other_clique_statements}"
+                )
+
+                score = len(
+                    set(other_clique_statements).intersection(
+                        set(top_k_predicted_statements)
+                    )
+                ) / min(
+                    len(other_clique_statements),
+                    top_k
+                )
+                scores.append(score)
+
+        return sum(scores) / len(scores)
