@@ -8,9 +8,10 @@ import random
 import logging
 from dataclasses import dataclass
 
-from . import load_dataset
 from .data import load_single_file_json_dataset
 from .similarity import proof_distance
+import os
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 
@@ -213,15 +214,29 @@ class PairTheoremDataset(Dataset):
         self.dataset_samples = self._create_pairs_dataset()
 
     def _create_pairs_dataset(self) -> List[Dict[str, Any]]:
-        pairs = set()
+        negative_pairs = set()
+        positive_pairs = set()
 
         for i in range(len(self.proof_distances)):
             distances = self.proof_distances[i]
 
             for j, dist in distances:
-                pairs.add((i, j, dist))
+                if dist <= self.threshold_pos:
+                    positive_pairs.add((i, j, dist))
+                else:
+                    negative_pairs.add((i, j, dist))
 
-        pairs = list(pairs)
+        positive_pairs = list(positive_pairs)
+        negative_pairs = list(negative_pairs)
+
+        random.shuffle(positive_pairs)
+        random.shuffle(negative_pairs)
+        min_class_size = min(len(positive_pairs), len(negative_pairs))
+
+        positive_pairs = positive_pairs[:min_class_size]
+        negative_pairs = negative_pairs[:min_class_size]
+
+        pairs = positive_pairs + negative_pairs
         random.shuffle(pairs)
 
         pairs = [self.__contrastive_item(p) for p in pairs]
@@ -385,3 +400,34 @@ class RankingDataset:
                 scores.append(score)
 
         return sum(scores) / len(scores)
+
+
+def visualize_dataset(dataset, output_dir="dataset_viz", bins=10):
+    os.makedirs(output_dir, exist_ok=True)
+
+    distances = [sample["dist"] for sample in dataset]
+    labels = [sample["label"] for sample in dataset]
+
+    plt.figure()
+    plt.hist(distances, bins=bins, edgecolor='black')
+    plt.title("Distribution of Proof Distances")
+    plt.xlabel("Proof Distance")
+    plt.ylabel("Count")
+    plt.tight_layout()
+    hist_path = os.path.join(output_dir, "distance_histogram.png")
+    plt.savefig(hist_path)
+    plt.close()
+
+    counts = {0: labels.count(0), 1: labels.count(1)}
+    plt.figure()
+    plt.bar(counts.keys(), counts.values(), color=['orange', 'skyblue'])
+    plt.xticks([0, 1], ["Negative", "Positive"])
+    plt.title("Label Distribution")
+    plt.ylabel("Count")
+    plt.tight_layout()
+    bar_path = os.path.join(output_dir, "label_distribution.png")
+    plt.savefig(bar_path)
+    plt.close()
+
+    print(f"Saved distance histogram to {hist_path}")
+    print(f"Saved label distribution to {bar_path}")

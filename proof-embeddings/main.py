@@ -5,11 +5,11 @@ import numpy as np
 from omegaconf import OmegaConf
 import logging
 from torch.utils.data import DataLoader
-from transformers import RobertaTokenizer
+from transformers import RobertaTokenizer, BertTokenizer
 
 from src import load_dataset, split_dataset
 from src import TheoremDataset, PairTheoremDataset
-from src import train_loop, evaluate
+from src import train_loop, evaluate, evaluate_classifier
 from src.dataset import RankingDataset
 
 logger = logging.getLogger(__name__)
@@ -55,6 +55,7 @@ def main(cfg_path: str = "config.yaml"):
         cfg.threshold_pos, cfg.threshold_neg,
         cfg.samples_from_single_anchor
     )
+    # visualize_dataset(train_dataset)
     # For validation loss calc
     # val_dataset_triplet = TheoremDataset(
     #     val_data, tokenizer, cfg.max_seq_length,
@@ -84,11 +85,14 @@ def main(cfg_path: str = "config.yaml"):
 
     logger.info("Evaluating on test set of size: %d", len(test_dataset))
 
-    test_results = evaluate(model, test_loader, device, cfg.threshold_pos, cfg.evaluation.k_values, ranking_validation_dataset, cfg.evaluation.f_score_beta)
+    test_results = evaluate_classifier(model, test_loader, device, cfg.threshold_pos, cfg.evaluation.k_values, ranking_validation_dataset, cfg.evaluation.f_score_beta)
     
     wandb.log({
-        "test_pearson": test_results["pearson"],
-        "test_spearman": test_results["spearman"]
+        "events_accuracy": test_results["events_accuracy"],
+        "accuracy": test_results["accuracy"],
+        "precision": test_results["precision"],
+        "recall": test_results["recall"],
+        "f1": test_results["f1"]
     })
 
     wandb.finish()

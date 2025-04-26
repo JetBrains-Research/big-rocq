@@ -6,6 +6,8 @@ import itertools
 import logging
 from typing import Optional
 
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+from scipy.special import expit
 from .metrics import compute_correlation_scores, recall_at_k, precision_at_k, f_scores
 from .model import RulerModel
 import torch.nn as nn
@@ -33,10 +35,12 @@ def train_one_epoch(
         input_ids_j = batch["input_ids_j"].to(device)
         attn_j = batch["attention_mask_j"].to(device)
 
-        pred_distance = model(input_ids_i, attn_i, input_ids_j, attn_j)
-        true_distance = batch["dist"].float().to(device).unsqueeze(1)
+        # pred_distance = model(input_ids_i, attn_i, input_ids_j, attn_j)
+        # true_distance = batch["dist"].float().to(device).unsqueeze(1)
+        labels = batch["label"].float().to(device).unsqueeze(1)
+        logits = model(input_ids_i, attn_i, input_ids_j, attn_j)
 
-        loss = loss_fn(pred_distance, true_distance)
+        loss = loss_fn(logits, labels)
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
@@ -52,6 +56,66 @@ def train_one_epoch(
         batch_index += 1
 
     return total_loss / len(dataloader)
+
+
+@torch.no_grad()
+def evaluate_classifier(
+    model,
+    dataloader,
+    device,
+    pos_threshold,
+    k_values,
+    ranking_validation_dataset,
+    f_score_beta=1.0,
+    loss_function=None
+):
+    model.eval()
+
+    all_logits = []
+    all_labels = []
+    total_loss = 0.0
+    num_batches = 0
+
+    for batch in tqdm(dataloader, desc="Eval", leave=False):
+        xi = batch["input_ids_i"].to(device)
+        mi = batch["attention_mask_i"].to(device)
+        xj = batch["input_ids_j"].to(device)
+        mj = batch["attention_mask_j"].to(device)
+        labels = batch["label"].float().to(device).unsqueeze(1)
+
+        logits = model(xi, mi, xj, mj)
+
+        if loss_function is not None:
+            loss = loss_function(logits, labels)
+            total_loss += loss.item()
+            num_batches += 1
+
+        all_logits.append(logits.cpu())
+        all_labels.append(labels.cpu())
+
+    all_logits = torch.cat(all_logits, dim=0).squeeze(1).numpy()
+    all_labels = torch.cat(all_labels, dim=0).squeeze(1).numpy()
+
+    probs = expit(all_logits)
+    preds = (probs >= 0.5).astype(int)
+
+    acc = accuracy_score(all_labels, preds)
+    prec, rec, f1, _ = precision_recall_fscore_support(
+        all_labels, preds, average="binary", zero_division=0
+    )
+
+    metrics = {
+        "accuracy": acc,
+        "precision": prec,
+        "recall": rec,
+        "f1": f1,
+        "events_accuracy": ranking_validation_dataset.get_accuracy_score(model, device)
+    }
+
+    if loss_function is not None and num_batches > 0:
+        metrics["val_loss"] = total_loss / num_batches
+
+    return metrics
 
 
 @torch.no_grad()
@@ -158,34 +222,55 @@ def train_loop(
 
     model.to(device)
 
-    loss_fn = nn.MSELoss().to(device)
+    # loss_fn = nn.MSELoss().to(device)
+    loss_fn = nn.BCEWithLogitsLoss().to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.learning_rate)
 
     train_loader = DataLoader(train_dataset, batch_size=cfg.batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=cfg.batch_size, shuffle=False)
 
     logger.info(f"Logging pre-training metrics")
-    metrics_val = evaluate(model, val_loader, device, cfg.threshold_pos, cfg.evaluation.k_values, ranking_validation_dataset, cfg.evaluation.f_score_beta, loss_fn)
+    metrics_val = evaluate_classifier(model, val_loader, device, cfg.threshold_pos, cfg.evaluation.k_values, ranking_validation_dataset, cfg.evaluation.f_score_beta, loss_fn)
+    # wandb.log({
+    #     "val_pearson": metrics_val["pearson"],
+    #     "val_spearman": metrics_val["spearman"]
+    # })
     wandb.log({
-        "val_pearson": metrics_val["pearson"],
-        "val_spearman": metrics_val["spearman"]
+        "val_loss": metrics_val["val_loss"],
+        "events_accuracy": metrics_val["events_accuracy"],
+        "accuracy": metrics_val["accuracy"],
+        "precision": metrics_val["precision"],
+        "recall": metrics_val["recall"],
+        "f1": metrics_val["f1"]
     })
 
     for epoch in range(cfg.epochs):
         train_loss = train_one_epoch(model, loss_fn, train_loader, optimizer, device, cfg, val_loader)
-        metrics_val = evaluate(model, val_loader, device, cfg.threshold_pos, cfg.evaluation.k_values, ranking_validation_dataset, cfg.evaluation.f_score_beta, loss_fn)
+        metrics_val = evaluate_classifier(model, val_loader, device, cfg.threshold_pos, cfg.evaluation.k_values, ranking_validation_dataset, cfg.evaluation.f_score_beta, loss_fn)
+        # wandb.log({
+        #     "train_loss": train_loss,
+        #     "val_loss": metrics_val["val_loss"],
+        #     "val_pearson": metrics_val["pearson"],
+        #     "val_spearman": metrics_val["spearman"],
+        #     "events_accuracy": metrics_val["events_accuracy"]
+        # })
+        # for k in cfg.evaluation.k_values:
+        #     wandb.log({f"val_recall@{k}": metrics_val["recall"][k]})
+        #     wandb.log({f"val_precision@{k}": metrics_val["precision"][k]})
+        #     wandb.log({f"val_f_score@{k}": metrics_val["f_score"][k]})
+        #
+        # print(f"[Epoch {epoch}] train_loss={train_loss:.4f} val_loss={metrics_val['val_loss']:.4f} val_pearson={metrics_val['pearson']:.4f} val_spearman={metrics_val['spearman']:.4f}")
+
         wandb.log({
             "train_loss": train_loss,
             "val_loss": metrics_val["val_loss"],
-            "val_pearson": metrics_val["pearson"],
-            "val_spearman": metrics_val["spearman"],
-            "events_accuracy": metrics_val["events_accuracy"]
+            "events_accuracy": metrics_val["events_accuracy"],
+            "accuracy": metrics_val["accuracy"],
+            "precision": metrics_val["precision"],
+            "recall": metrics_val["recall"],
+            "f1": metrics_val["f1"]
         })
-        for k in cfg.evaluation.k_values:
-            wandb.log({f"val_recall@{k}": metrics_val["recall"][k]})
-            wandb.log({f"val_precision@{k}": metrics_val["precision"][k]})
-            wandb.log({f"val_f_score@{k}": metrics_val["f_score"][k]})
 
-        print(f"[Epoch {epoch}] train_loss={train_loss:.4f} val_loss={metrics_val['val_loss']:.4f} val_pearson={metrics_val['pearson']:.4f} val_spearman={metrics_val['spearman']:.4f}")
+        print(f"[Epoch {epoch}] train_loss={train_loss:.4f} val_loss={metrics_val['val_loss']:.4f} events_accuracy={metrics_val['events_accuracy']:.4f} accuracy={metrics_val['accuracy']:.4f} precision={metrics_val['precision']:.4f} recall={metrics_val['recall']:.4f} f1={metrics_val['f1']:.4f}")
 
     return model

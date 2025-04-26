@@ -6,3 +6,5 @@ omegaconf
 numpy
 scipy
 python-Levenshtein
+scikit-learn
+matplotlib

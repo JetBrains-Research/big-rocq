@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from transformers import RobertaModel
+from transformers import RobertaModel, BertModel
 import logging
 
 logger = logging.getLogger(__name__)
