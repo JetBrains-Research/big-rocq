@@ -1,209 +1,187 @@
 import torch
 import wandb
 from tqdm import tqdm
-from torch.utils.data import DataLoader
-import itertools
+import torch.nn.functional as F
 import logging
-from typing import Optional
 
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-from scipy.special import expit
-from .metrics import compute_correlation_scores, recall_at_k, precision_at_k, f_scores
-from .model import RulerModel
-import torch.nn as nn
+from .dataloader import DynamicQueryDataLoader, RankingDataLoader
+from .losses import InfoNCELoss
+from .metrics import precision_at_k, recall_at_k, f_scores, compute_correlation_scores
+from .model import BERTStatementEmbedder
 
 logger = logging.getLogger(__name__)
 
-def train_one_epoch(
+def train_one_step(
     model,
     loss_fn,
-    dataloader,
+    batch,
     optimizer,
     device,
-    cfg,
-    val_loader,
-    eval_freq: Optional[int] = None
 ):
     model.train()
-    total_loss = 0.0
-    batch_index = 0
-    for batch in tqdm(dataloader, desc="Training Iter", leave=False):
-        optimizer.zero_grad()
 
-        input_ids_i = batch["input_ids_i"].to(device)
-        attn_i = batch["attention_mask_i"].to(device)
-        input_ids_j = batch["input_ids_j"].to(device)
-        attn_j = batch["attention_mask_j"].to(device)
+    optimizer.zero_grad()
 
-        # pred_distance = model(input_ids_i, attn_i, input_ids_j, attn_j)
-        # true_distance = batch["dist"].float().to(device).unsqueeze(1)
-        labels = batch["label"].float().to(device).unsqueeze(1)
-        logits = model(input_ids_i, attn_i, input_ids_j, attn_j)
+    anchor_ids = batch["input_ids_anchor"].to(device)
+    anchor_mask = batch["attention_mask_anchor"].to(device)
+    pos_ids = batch["input_ids_positive"].to(device)
+    pos_mask = batch["attention_mask_positive"].to(device)
+    neg_ids = batch["input_ids_negatives"].to(device)  # [B, K, L]
+    neg_mask = batch["attention_mask_negatives"].to(device)
 
-        loss = loss_fn(logits, labels)
-        loss.backward()
-        optimizer.step()
-        total_loss += loss.item()
+    emb_anchor = model(anchor_ids, anchor_mask)
+    emb_positive = model(pos_ids, pos_mask)
 
-        # if eval_freq is not None and batch_index % eval_freq == 0:
-        #     metrics_val = evaluate(model, val_loader, device, cfg.threshold_pos, cfg.evaluation.k_values, cfg.evaluation.f_score_beta, loss_fn)
-        #     wandb.log({
-        #         "val_loss": metrics_val["val_loss"],
-        #         "val_pearson": metrics_val["pearson"],
-        #         "val_spearman": metrics_val["spearman"]
-        #     })
+    batch_size, k_neg, seq_len = neg_ids.shape
+    emb_negatives = model(
+        neg_ids.reshape(-1, seq_len),
+        neg_mask.reshape(-1, seq_len)
+    ).reshape(batch_size, k_neg, -1)
 
-        batch_index += 1
+    loss = loss_fn(emb_anchor, emb_positive, emb_negatives)
 
-    return total_loss / len(dataloader)
+    loss.backward()
+    optimizer.step()
+
+    return loss.item()
 
 
 @torch.no_grad()
-def evaluate_classifier(
+def evaluate_ranking_ability(
     model,
     dataloader,
     device,
     pos_threshold,
     k_values,
-    ranking_validation_dataset,
-    f_score_beta=1.0,
-    loss_function=None
+    extra_imm_validation_ds,
+    eval_steps=100,
 ):
     model.eval()
+    steps = 0
 
-    all_logits = []
-    all_labels = []
-    total_loss = 0.0
-    num_batches = 0
+    precisions = []
+    recalls = []
+    f1s = []
+
+    pearson_correlations = []
+    spearman_correlations = []
 
     for batch in tqdm(dataloader, desc="Eval", leave=False):
-        xi = batch["input_ids_i"].to(device)
-        mi = batch["attention_mask_i"].to(device)
-        xj = batch["input_ids_j"].to(device)
-        mj = batch["attention_mask_j"].to(device)
-        labels = batch["label"].float().to(device).unsqueeze(1)
+        anchor_ids = batch["input_ids_anchor"].to(device)
+        anchor_mask = batch["attention_mask_anchor"].to(device)
+        others_ids = batch["input_ids_others"].to(device)
+        others_mask = batch["attention_mask_others"].to(device)
 
-        logits = model(xi, mi, xj, mj)
+        other_idxs = batch["other_idxs"].to(device)
+        true_distances = batch["distances"].to(device)
 
-        if loss_function is not None:
-            loss = loss_function(logits, labels)
-            total_loss += loss.item()
-            num_batches += 1
+        emb_anchor = model(anchor_ids, anchor_mask)
+        batch_size, others_count, seq_len = others_ids.shape
 
-        all_logits.append(logits.cpu())
-        all_labels.append(labels.cpu())
+        emb_others = model(
+            others_ids.reshape(-1, seq_len),
+            others_mask.reshape(-1, seq_len)
+        ).reshape(batch_size, others_count, -1)
 
-    all_logits = torch.cat(all_logits, dim=0).squeeze(1).numpy()
-    all_labels = torch.cat(all_labels, dim=0).squeeze(1).numpy()
+        emb_anchor = F.normalize(emb_anchor, dim=-1)
+        emb_others = F.normalize(emb_others, dim=-1)
 
-    probs = expit(all_logits)
-    preds = (probs >= 0.5).astype(int)
+        similarities = torch.einsum('bd,bnd->bn', emb_anchor, emb_others)  # [B, K]
+        predicted_distances = 1 - similarities
 
-    acc = accuracy_score(all_labels, preds)
-    prec, rec, f1, _ = precision_recall_fscore_support(
-        all_labels, preds, average="binary", zero_division=0
-    )
+        for b in range(batch_size):
+            predicted = predicted_distances[b].cpu().numpy()
+            true_dists = true_distances[b]
+            pairs = list(zip(other_idxs[b], predicted))
+            relevant_items = [idx for idx, dist in zip(other_idxs[b], true_dists) if dist <= pos_threshold]
 
-    metrics = {
-        "accuracy": acc,
-        "precision": prec,
-        "recall": rec,
-        "f1": f1,
-        "events_accuracy": ranking_validation_dataset.get_accuracy_score(model, device)
+            pairs.sort(key=lambda x: x[1])
+            ranked_indices = [idx for idx, _ in pairs]
+
+            precision = precision_at_k(ranked_indices, relevant_items, k_values)
+            recall = recall_at_k(ranked_indices, relevant_items, k_values)
+            f1 = f_scores(recall, precision, k_values)
+
+            pearson_corr, _, spearman_corr, _ = compute_correlation_scores(
+                predicted.tolist(),
+                true_dists.tolist()
+            )
+
+            precisions.append(precision)
+            recalls.append(recall)
+            f1s.append(f1)
+
+            pearson_correlations.append(pearson_corr)
+            spearman_correlations.append(spearman_corr)
+
+        steps += 1
+        if steps >= eval_steps:
+            break
+
+    avg_precision = {}
+    avg_recall = {}
+    avg_f1 = {}
+
+    for k in k_values:
+        avg_precision[k] = sum(p[k] for p in precisions) / len(precisions)
+        avg_recall[k] = sum(r[k] for r in recalls) / len(recalls)
+        avg_f1[k] = sum(f1[k] for f1 in f1s) / len(f1s)
+
+    return {
+        "precision": avg_precision,
+        "recall": avg_recall,
+        "f1": avg_f1,
+        "pearson": sum(pearson_correlations) / len(pearson_correlations),
+        "spearman": sum(spearman_correlations) / len(spearman_correlations),
+        "imm_extra_eval": extra_imm_validation_ds.get_accuracy_score(model, device),
     }
 
-    if loss_function is not None and num_batches > 0:
-        metrics["val_loss"] = total_loss / num_batches
-
-    return metrics
-
-
 @torch.no_grad()
-def evaluate(
+def evaluate_validation_loss(
     model,
     dataloader,
     device,
-    pos_threshold,
-    k_values,
-    ranking_validation_dataset,
-    f_score_beta=1.0,
-    loss_function=None
+    loss_fn,
+    eval_steps=100,
 ):
     model.eval()
-
     total_loss = 0.0
-    num_batches = 0
+    steps = 0
 
-    dist_preds = []
-    dist_true = []
+    for batch in tqdm(dataloader, desc="Eval", leave=False):
+        anchor_ids = batch["input_ids_anchor"].to(device)
+        anchor_mask = batch["attention_mask_anchor"].to(device)
+        pos_ids = batch["input_ids_positive"].to(device)
+        pos_mask = batch["attention_mask_positive"].to(device)
+        neg_ids = batch["input_ids_negatives"].to(device)  # [B, K, L]
+        neg_mask = batch["attention_mask_negatives"].to(device)
 
-    anchor2pred = {}
-    anchor2truth = {}
+        emb_anchor = model(anchor_ids, anchor_mask)  # [B, D]
+        emb_positive = model(pos_ids, pos_mask)      # [B, D]
 
-    for batch in tqdm(dataloader, desc="Eval Iter", leave=False):
-        input_ids_i = batch["input_ids_i"].to(device)
-        attn_i = batch["attention_mask_i"].to(device)
-        input_ids_j = batch["input_ids_j"].to(device)
-        attn_j = batch["attention_mask_j"].to(device)
+        batch_size, k_neg, seq_len = neg_ids.shape
+        emb_negatives = model(
+            neg_ids.reshape(-1, seq_len),
+            neg_mask.reshape(-1, seq_len)
+        ).reshape(batch_size, k_neg, -1)  # [B, K, D]
 
-        pred_distance = model(input_ids_i, attn_i, input_ids_j, attn_j)
-        pred_distance = pred_distance.squeeze(1)
-        true_distance = batch["dist"].to(device)
+        emb_anchor = F.normalize(emb_anchor, dim=-1)
+        emb_positive = F.normalize(emb_positive, dim=-1)
+        emb_negatives = F.normalize(emb_negatives, dim=-1)
 
-        if loss_function is not None:
-            loss = loss_function(pred_distance.unsqueeze(1), true_distance.unsqueeze(1))
-            total_loss += loss.item()
+        loss = loss_fn(emb_anchor, emb_positive, emb_negatives)
+        total_loss += loss.item()
 
-        dist_preds.extend(pred_distance.cpu().numpy().tolist())
-        dist_true.extend(true_distance.cpu().numpy().tolist())
+        steps += 1
+        if steps >= eval_steps:
+            break
 
-        i_indices = batch["idx_i"].cpu().numpy()
-        j_indices = batch["idx_j"].cpu().numpy()
+    avg_val_loss = total_loss / steps if loss_fn else None
 
-        for index in range(len(i_indices)):
-            anchor = int(i_indices[index])
-            other = int(j_indices[index])
-            dpred_val = float(pred_distance[index].item())
-
-            if anchor not in anchor2pred:
-                anchor2pred[anchor] = []
-            anchor2pred[anchor].append((dpred_val, other))
-
-            if anchor not in anchor2truth:
-                anchor2truth[anchor] = set()
-            if true_distance[index].item() <= pos_threshold:
-                anchor2truth[anchor].add(other)
-
-        num_batches += 1
-
-    avg_val_loss = total_loss / num_batches if num_batches > 0 and loss_function is not None else None
-
-    query2predictions = {}
-    for anchor, dist_list in anchor2pred.items():
-        # Sort by distance, we simulate the retrieval task
-        # by sorting the distances and taking the top k
-        dist_list.sort(key=lambda x: x[0])
-        sorted_idx = [v[1] for v in dist_list]
-        # Remove duplicates while preserving order
-        sorted_idx = [key for key, _ in itertools.groupby(sorted_idx)]
-        query2predictions[anchor] = sorted_idx
-
-    recs = recall_at_k(anchor2truth, query2predictions, k_values)
-    precisions = precision_at_k(anchor2truth, query2predictions, k_values)
-    fs_at_k = f_scores(recs, precisions, k_values, f_score_beta)
-
-    pearson_corr, p_pearson, spearman_corr, p_spearman = compute_correlation_scores(dist_preds, dist_true)
     metrics = {
-        "pearson": pearson_corr,
-        "p_pearson": p_pearson,
-        "spearman": spearman_corr,
-        "p_spearman": p_spearman,
-        "recall": recs,
-        "precision": precisions,
-        "f_score": fs_at_k,
         "val_loss": avg_val_loss,
-        "events_accuracy": ranking_validation_dataset.get_accuracy_score(model, device),
     }
+
     return metrics
 
 
@@ -212,65 +190,62 @@ def train_loop(
     val_dataset,
     cfg,
     device,
-    ranking_validation_dataset
+    val_dataset_ranking,
+    extra_imm_validation_ds
 ):
-    model = RulerModel(
+    model = BERTStatementEmbedder(
         model_name=cfg.model_name,
-        freeze_bert=cfg.freeze_bert,
         embedding_dim=cfg.embedding_dim
-    )
+    ).to(device)
 
-    model.to(device)
-
-    # loss_fn = nn.MSELoss().to(device)
-    loss_fn = nn.BCEWithLogitsLoss().to(device)
+    loss_fn = InfoNCELoss(temperature=0.07).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.learning_rate)
 
-    train_loader = DataLoader(train_dataset, batch_size=cfg.batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=cfg.batch_size, shuffle=False)
+    train_loader = DynamicQueryDataLoader(train_dataset, batch_size=cfg.batch_size)
+    val_loader = DynamicQueryDataLoader(val_dataset, batch_size=cfg.batch_size)
+    val_ranking_loader = RankingDataLoader(val_dataset_ranking, batch_size=cfg.batch_size)
 
-    logger.info(f"Logging pre-training metrics")
-    metrics_val = evaluate_classifier(model, val_loader, device, cfg.threshold_pos, cfg.evaluation.k_values, ranking_validation_dataset, cfg.evaluation.f_score_beta, loss_fn)
-    # wandb.log({
-    #     "val_pearson": metrics_val["pearson"],
-    #     "val_spearman": metrics_val["spearman"]
-    # })
-    wandb.log({
-        "val_loss": metrics_val["val_loss"],
-        "events_accuracy": metrics_val["events_accuracy"],
-        "accuracy": metrics_val["accuracy"],
-        "precision": metrics_val["precision"],
-        "recall": metrics_val["recall"],
-        "f1": metrics_val["f1"]
-    })
+    step = 0
+    train_losses = []
 
-    for epoch in range(cfg.epochs):
-        train_loss = train_one_epoch(model, loss_fn, train_loader, optimizer, device, cfg, val_loader)
-        metrics_val = evaluate_classifier(model, val_loader, device, cfg.threshold_pos, cfg.evaluation.k_values, ranking_validation_dataset, cfg.evaluation.f_score_beta, loss_fn)
-        # wandb.log({
-        #     "train_loss": train_loss,
-        #     "val_loss": metrics_val["val_loss"],
-        #     "val_pearson": metrics_val["pearson"],
-        #     "val_spearman": metrics_val["spearman"],
-        #     "events_accuracy": metrics_val["events_accuracy"]
-        # })
-        # for k in cfg.evaluation.k_values:
-        #     wandb.log({f"val_recall@{k}": metrics_val["recall"][k]})
-        #     wandb.log({f"val_precision@{k}": metrics_val["precision"][k]})
-        #     wandb.log({f"val_f_score@{k}": metrics_val["f_score"][k]})
-        #
-        # print(f"[Epoch {epoch}] train_loss={train_loss:.4f} val_loss={metrics_val['val_loss']:.4f} val_pearson={metrics_val['pearson']:.4f} val_spearman={metrics_val['spearman']:.4f}")
+    while step < cfg.steps:
+        for batch in tqdm(train_loader, desc="Train", leave=False):
+            model.train()
+            loss = train_one_step(model, loss_fn, batch, optimizer, device)
+            train_losses.append(loss)
 
-        wandb.log({
-            "train_loss": train_loss,
-            "val_loss": metrics_val["val_loss"],
-            "events_accuracy": metrics_val["events_accuracy"],
-            "accuracy": metrics_val["accuracy"],
-            "precision": metrics_val["precision"],
-            "recall": metrics_val["recall"],
-            "f1": metrics_val["f1"]
-        })
+            step += 1
 
-        print(f"[Epoch {epoch}] train_loss={train_loss:.4f} val_loss={metrics_val['val_loss']:.4f} events_accuracy={metrics_val['events_accuracy']:.4f} accuracy={metrics_val['accuracy']:.4f} precision={metrics_val['precision']:.4f} recall={metrics_val['recall']:.4f} f1={metrics_val['f1']:.4f}")
+            if step % cfg.evaluate_freq == 0 or step == cfg.steps:
+                avg_train_loss = sum(train_losses[-cfg.evaluate_freq:]) / len(train_losses[-cfg.evaluate_freq:])
+                val_loss_metrics = evaluate_validation_loss(
+                    model, val_loader, device,
+                    loss_fn, eval_steps=cfg.eval_steps,
+                )
+                val_ranking_metrics = evaluate_ranking_ability(
+                    model, val_ranking_loader, device,
+                    cfg.threshold_pos, cfg.evaluation.k_values,
+                    extra_imm_validation_ds,
+                    eval_steps=cfg.eval_steps,
+                )
+
+                wandb.log({
+                    "train_loss": avg_train_loss,
+                    "val_loss": val_loss_metrics["val_loss"],
+                    "val_pearson": val_ranking_metrics["pearson"],
+                    "val_spearman": val_ranking_metrics["spearman"],
+                    "val_imm_extra_eval": val_ranking_metrics["imm_extra_eval"],
+                })
+
+                for k in cfg.evaluation.k_values:
+                    wandb.log({
+                        f"val_precision_at_{k}": val_ranking_metrics["precision"][k],
+                        f"val_recall_at_{k}": val_ranking_metrics["recall"][k],
+                        f"val_f1_at_{k}": val_ranking_metrics["f1"][k],
+                    })
+
+
+            if step >= cfg.steps:
+                break
 
     return model

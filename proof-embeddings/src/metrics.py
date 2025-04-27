@@ -1,5 +1,5 @@
 from scipy.stats import pearsonr, spearmanr
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 import logging
 
 logger = logging.getLogger(__name__)
@@ -31,56 +31,35 @@ def f_scores(
 
 
 def recall_at_k(
-    query2truth: dict,
-    query2predictions: dict,
+    predicted_ranked_items: List[int],
+    relevant_items: List[int],
     k_values: List[int]
 ) -> dict:
-    # logger.info(f"Truth: {query2truth}, Predictions: {query2predictions}")
     results = {}
-    anchor_count = len(query2truth)
 
-    if anchor_count == 0:
-        return {k: 0.0 for k in k_values}
+    if len(relevant_items) == 0:
+        for k in k_values:
+            results[k] = 0.0
+        return results
 
     for k in k_values:
-        recall_sum_all_anchors = 0
-        empty_recs_count = 0
-        for anchor_id, relevant_set in query2truth.items():
-            first_k_predictions = query2predictions[anchor_id][:k]
-            valid_recs_count = len(set(first_k_predictions).intersection(relevant_set))
-            recall_for_anchor = float(valid_recs_count) / float(len(relevant_set)) if len(relevant_set) > 0 else 0.0
-            if len(relevant_set) == 0:
-                empty_recs_count += 1
-
-            recall_sum_all_anchors += recall_for_anchor
-
-        # Average recall across all anchors
-        results[k] = float(recall_sum_all_anchors) / float(anchor_count - empty_recs_count) if anchor_count - empty_recs_count > 0 else 0.0
+        first_k_predictions = predicted_ranked_items[:k]
+        valid_recs_count = len(set(first_k_predictions).intersection(relevant_items))
+        results[k] = float(valid_recs_count) / float(len(relevant_items))
 
     return results
 
 
 def precision_at_k(
-    query2truth: dict,
-    query2predictions: dict,
+    predicted_ranked_items: List[int],
+    relevant_items: List[int],
     k_values: List[int]
 ) -> dict:
     results = {}
-    anchor_count = len(query2truth)
-
-    if anchor_count == 0:
-        return {k: 0.0 for k in k_values}
 
     for k in k_values:
-        precision_sum_all_anchors = 0
-        for anchor_id, relevant_set in query2truth.items():
-            first_k_predictions = query2predictions[anchor_id][:k]
-            valid_recs_count = len(set(first_k_predictions).intersection(relevant_set))
-            precision_for_anchor = float(valid_recs_count) / float(k)
-
-            precision_sum_all_anchors += precision_for_anchor
-
-        # Average precision across all anchors
-        results[k] = float(precision_sum_all_anchors) / float(anchor_count)
+        first_k_predictions = predicted_ranked_items[:k]
+        valid_recs_count = len(set(first_k_predictions).intersection(relevant_items))
+        results[k] = float(valid_recs_count) / float(k)
 
     return results

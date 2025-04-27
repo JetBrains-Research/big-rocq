@@ -1,13 +1,16 @@
 from Levenshtein import distance
 from typing import List
 import random
+import re
 
 
-def split_proof_into_sentences(proof_text: str) -> List[str]:
-    proof_text = proof_text.strip()
-    sentences = proof_text.split('.')
-    sentences = [s.strip() for s in sentences if s.strip()]
-    return sentences
+def split_tactics(proof_text: str) -> list[str]:
+    # first normalize newlines to semicolons
+    text = proof_text.replace('\n', ';')
+    # split on any run of '.' or ';'
+    raw = re.split(r'[.;]+', text)
+    # strip and filter
+    return [s.strip() for s in raw if s.strip()]
 
 
 def normalized_string_distance(s1: str, s2: str) -> float:
@@ -34,6 +37,10 @@ def add_small_noize(dist: float) -> float:
     return dist
 
 
+def jitter(dist: float, eps: float=0.02) -> float:
+    return min(1.0, max(0.0, dist + random.uniform(-eps, eps)))
+
+
 # TODO: When distance = 0 add random noise to the distance
 def proof_distance(proof1: str, proof2: str) -> float:
     """
@@ -45,8 +52,8 @@ def proof_distance(proof1: str, proof2: str) -> float:
     We return the normalized distance: distance(proof1, proof2) / max(len(proof1), len(proof2)).
     """
 
-    sents1 = split_proof_into_sentences(proof1)
-    sents2 = split_proof_into_sentences(proof2)
+    sents1 = split_tactics(proof1)
+    sents2 = split_tactics(proof2)
     n1, n2 = len(sents1), len(sents2)
 
     max_len = max(n1, n2)
@@ -71,6 +78,6 @@ def proof_distance(proof1: str, proof2: str) -> float:
             )
 
     proof_dist = dp[n1][n2] / float(max_len)
-    return add_small_noize(proof_dist)
+    return jitter(proof_dist, eps=0.02)
 
     # return proof_dist

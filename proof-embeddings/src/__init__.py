@@ -1,5 +1,6 @@
 from .data import load_dataset, split_dataset
-from .dataset import TheoremDataset, PairTheoremDataset
-from .train import evaluate, train_loop, evaluate_classifier
+from .dataset import TheoremDataset, PairTheoremDataset, ValidationDataset
+from .train import train_loop
+from .dataloader import DynamicQueryDataLoader
 
-__all__ = [load_dataset, split_dataset, TheoremDataset, PairTheoremDataset, train_loop, evaluate, evaluate_classifier]
+__all__ = [load_dataset, split_dataset, TheoremDataset, PairTheoremDataset, train_loop, DynamicQueryDataLoader, ValidationDataset]

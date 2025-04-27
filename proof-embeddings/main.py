@@ -4,13 +4,12 @@ import random
 import numpy as np
 from omegaconf import OmegaConf
 import logging
-from torch.utils.data import DataLoader
 from transformers import RobertaTokenizer, BertTokenizer
 
 from src import load_dataset, split_dataset
-from src import TheoremDataset, PairTheoremDataset
-from src import train_loop, evaluate, evaluate_classifier
-from src.dataset import RankingDataset
+from src import TheoremDataset, PairTheoremDataset, ValidationDataset
+from src import train_loop
+from src.dataset import RankingDataset, visualize_dataset
 
 logger = logging.getLogger(__name__)
 
@@ -44,31 +43,40 @@ def main(cfg_path: str = "config.yaml"):
     train_data, val_data, test_data = split_dataset(data, cfg.train_split, cfg.val_split, cfg.test_split)
     tokenizer = RobertaTokenizer.from_pretrained(cfg.model_name)
 
-    train_dataset = PairTheoremDataset(
+    train_dataset = TheoremDataset(
         train_data, tokenizer, cfg.max_seq_length,
         cfg.threshold_pos, cfg.threshold_neg,
-        cfg.samples_from_single_anchor
-    )
-    # For correlation and recall calc during eval
-    val_dataset = PairTheoremDataset(
-        val_data, tokenizer, cfg.max_seq_length,
-        cfg.threshold_pos, cfg.threshold_neg,
-        cfg.samples_from_single_anchor
-    )
-    # visualize_dataset(train_dataset)
-    # For validation loss calc
-    # val_dataset_triplet = TheoremDataset(
-    #     val_data, tokenizer, cfg.max_seq_length,
-    #     cfg.threshold_pos, cfg.threshold_neg,
-    #     cfg.samples_from_single_anchor
-    # )
-    test_dataset = PairTheoremDataset(
-        test_data, tokenizer, cfg.max_seq_length,
-        cfg.threshold_pos, cfg.threshold_neg,
-        cfg.samples_from_single_anchor
+        cfg.samples_from_single_anchor,
+        cfg.k_negatives
     )
 
-    ranking_validation_dataset = RankingDataset(
+    # visualize_dataset(train_dataset)
+    #
+    # raise NotImplementedError
+
+    val_dataset = TheoremDataset(
+        val_data, tokenizer, cfg.max_seq_length,
+        cfg.threshold_pos, cfg.threshold_neg,
+        cfg.samples_from_single_anchor,
+        cfg.k_negatives
+    )
+
+    val_dataset_ranking = ValidationDataset(
+        val_data, tokenizer, cfg.max_seq_length,
+        cfg.threshold_pos, cfg.threshold_neg,
+        cfg.samples_from_single_anchor,
+        cfg.k_negatives
+    )
+
+    # visualize_dataset(train_dataset)
+    test_dataset = TheoremDataset(
+        test_data, tokenizer, cfg.max_seq_length,
+        cfg.threshold_pos, cfg.threshold_neg,
+        cfg.samples_from_single_anchor,
+        cfg.k_negatives
+    )
+
+    extra_imm_validation = RankingDataset(
         cfg.max_seq_length, tokenizer,
         cfg.rankin_ds_path_statements,
         cfg.rankin_ds_path_references
@@ -77,23 +85,9 @@ def main(cfg_path: str = "config.yaml"):
     logger.info(f"Created train, validation, and test datasets with sizes: {len(train_dataset)}, {len(val_dataset)}, {len(test_dataset)}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = train_loop(train_dataset, val_dataset, cfg, device, ranking_validation_dataset)
+    model = train_loop(train_dataset, val_dataset, cfg, device, val_dataset_ranking, extra_imm_validation)
     
     model.to(device)
-
-    test_loader = DataLoader(test_dataset, batch_size=cfg.batch_size, shuffle=False)
-
-    logger.info("Evaluating on test set of size: %d", len(test_dataset))
-
-    test_results = evaluate_classifier(model, test_loader, device, cfg.threshold_pos, cfg.evaluation.k_values, ranking_validation_dataset, cfg.evaluation.f_score_beta)
-    
-    wandb.log({
-        "events_accuracy": test_results["events_accuracy"],
-        "accuracy": test_results["accuracy"],
-        "precision": test_results["precision"],
-        "recall": test_results["recall"],
-        "f1": test_results["f1"]
-    })
 
     wandb.finish()
 
