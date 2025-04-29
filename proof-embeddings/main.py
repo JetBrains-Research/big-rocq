@@ -7,7 +7,7 @@ import logging
 from transformers import RobertaTokenizer, BertTokenizer
 
 from src import load_dataset, split_dataset
-from src import TheoremDataset, PairTheoremDataset, ValidationDataset
+from src import TrainingDataset, ValidationDataset
 from src import train_loop
 from src.dataset import RankingDataset, visualize_dataset
 
@@ -39,11 +39,14 @@ def main(cfg_path: str = "config.yaml"):
     else:
         wandb.init(mode="disabled")
 
-    data = load_dataset(cfg.dataset_path)
-    train_data, val_data, test_data = split_dataset(data, cfg.train_split, cfg.val_split, cfg.test_split)
+    data = load_dataset(cfg.dataset_path, 1)
+    train_data, val_data, _ = split_dataset(
+        data, cfg.train_split, cfg.val_split,
+        cfg.test_split, remove=[cfg.rankin_ds_path_statements]
+    )
     tokenizer = RobertaTokenizer.from_pretrained(cfg.model_name)
 
-    train_dataset = TheoremDataset(
+    train_dataset = TrainingDataset(
         train_data, tokenizer, cfg.max_seq_length,
         cfg.threshold_pos, cfg.threshold_neg,
         cfg.samples_from_single_anchor,
@@ -54,7 +57,7 @@ def main(cfg_path: str = "config.yaml"):
     #
     # raise NotImplementedError
 
-    val_dataset = TheoremDataset(
+    val_dataset = TrainingDataset(
         val_data, tokenizer, cfg.max_seq_length,
         cfg.threshold_pos, cfg.threshold_neg,
         cfg.samples_from_single_anchor,
@@ -65,15 +68,7 @@ def main(cfg_path: str = "config.yaml"):
         val_data, tokenizer, cfg.max_seq_length,
         cfg.threshold_pos, cfg.threshold_neg,
         cfg.samples_from_single_anchor,
-        cfg.k_negatives
-    )
-
-    # visualize_dataset(train_dataset)
-    test_dataset = TheoremDataset(
-        test_data, tokenizer, cfg.max_seq_length,
-        cfg.threshold_pos, cfg.threshold_neg,
-        cfg.samples_from_single_anchor,
-        cfg.k_negatives
+        cfg.k_negatives, cfg.evaluation.query_size_in_eval
     )
 
     extra_imm_validation = RankingDataset(
@@ -82,7 +77,7 @@ def main(cfg_path: str = "config.yaml"):
         cfg.rankin_ds_path_references
     )
 
-    logger.info(f"Created train, validation, and test datasets with sizes: {len(train_dataset)}, {len(val_dataset)}, {len(test_dataset)}")
+    logger.info(f"Created train, validation with sizes: {len(train_dataset)}, {len(val_dataset)}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = train_loop(train_dataset, val_dataset, cfg, device, val_dataset_ranking, extra_imm_validation)

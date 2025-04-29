@@ -1,16 +1,34 @@
 from Levenshtein import distance
-from typing import List
+from sklearn.metrics.pairwise import cosine_similarity
 import random
 import re
+import numpy as np
 
 
 def split_tactics(proof_text: str) -> list[str]:
-    # first normalize newlines to semicolons
     text = proof_text.replace('\n', ';')
-    # split on any run of '.' or ';'
     raw = re.split(r'[.;]+', text)
-    # strip and filter
     return [s.strip() for s in raw if s.strip()]
+
+
+def statement_distance(s1: str, s2: str, vectorizer) -> float:
+    """
+    1 - cosine( tfidf(s1), tfidf(s2) ), in [0,1].
+    """
+    v1 = vectorizer.transform([s1])
+    v2 = vectorizer.transform([s2])
+    sim = cosine_similarity(v1, v2)[0, 0]
+    return 1.0 - float(sim)
+
+
+def tactics_jaccard(s1: str, s2: str) -> float:
+    t1 = set(split_tactics(s1))
+    t2 = set(split_tactics(s2))
+    if not t1 and not t2:
+        return 0.0
+    inter = len(t1 & t2)
+    union = len(t1 | t2)
+    return 1.0 - (inter / union)
 
 
 def normalized_string_distance(s1: str, s2: str) -> float:
@@ -37,12 +55,11 @@ def add_small_noize(dist: float) -> float:
     return dist
 
 
-def jitter(dist: float, eps: float=0.02) -> float:
-    return min(1.0, max(0.0, dist + random.uniform(-eps, eps)))
+def jitter(dist: float, eps: float = 1e-3) -> float:
+    return float(np.clip(dist + random.uniform(-eps, +eps), 0.0, 1.0))
 
 
-# TODO: When distance = 0 add random noise to the distance
-def proof_distance(proof1: str, proof2: str) -> float:
+def proof_distance(proof1: str, proof2: str, stmt1: str, stmt2: str, vectorizer) -> float:
     """
     Levenshtein distance at the sequence level, but:
      - cost of insertion = 1
@@ -78,6 +95,15 @@ def proof_distance(proof1: str, proof2: str) -> float:
             )
 
     proof_dist = dp[n1][n2] / float(max_len)
-    return jitter(proof_dist, eps=0.02)
 
-    # return proof_dist
+    stmt_dist = statement_distance(stmt1, stmt2, vectorizer)
+
+    tac_dist = tactics_jaccard(proof1, proof2)
+
+    a, b, g = 0.7, 0.15, 0.15
+    composite = a * proof_dist + b * stmt_dist + g * tac_dist
+    composite = jitter(composite, eps=1e-3)
+
+    rounded_dist = round(float(np.clip(composite, 0.0, 1.0)), 5)
+
+    return rounded_dist

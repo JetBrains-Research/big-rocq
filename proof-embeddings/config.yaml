@@ -1,14 +1,14 @@
 project_name: "coq-theorem-embedding"
-experiment_name: "infonce-codebert-baseline-noized-distance"
+experiment_name: "infonce-file-normalized-ds"
 log_level: "INFO"
 
 dataset_path: "./data/"
-rankin_ds_path_statements: "./validationSet/data_events.json"
+rankin_ds_path_statements: "./data/imm/basic/Events_statements.json"
 rankin_ds_path_references: "./validationSet/reference_premises.json"
-samples_from_single_anchor: 4000
+samples_from_single_anchor: 150
 train_split: 0.8
-val_split: 0.15
-test_split: 0.05
+val_split: 0.2
+test_split: 0.0
 
 model_name: "microsoft/codebert-base"
 #model_name: "prajjwal1/bert-tiny"
@@ -38,5 +38,6 @@ wandb:
 
 evaluation:
   # For precision@k and recall@k
-  k_values: [14, 20]
+  k_values: [15]
   f_score_beta: 1
+  query_size_in_eval: 20

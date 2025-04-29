@@ -8,31 +8,12 @@ import torch
 from typing import List, Dict, Any, Tuple
 from tqdm import tqdm
 import logging
-from dataclasses import dataclass
 
 from .data import load_single_file_json_dataset
-from .similarity import proof_distance
-import os
-import random
-import matplotlib.pyplot as plt
-import seaborn as sns
+from .similarity import proof_distance, split_tactics
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class Triplet:
-    anchor: int
-    positive: int
-    negative: int
-    positive_distance: float
-    negative_distance: float
-
-    def __getitem__(self, keys):
-        return iter(getattr(self, k) for k in keys)
-
-    def __hash__(self):
-        return hash((self.anchor, self.positive, self.negative))
 
 
 class PrecomputedDistances:
@@ -49,10 +30,57 @@ class PrecomputedDistances:
         return len(self.positive_distances) >= enough_pos and len(self.negative_distances) >= k
 
 
-class TheoremDataset(Dataset):
+class DatasetItem:
+    input_ids: torch.Tensor
+    attention_mask: torch.Tensor
+    idx: int
+    original_statement: str
+    proof_str: str
+    positive_distances: List[Tuple[int, float]]
+    negative_distances: List[Tuple[int, float]]
+
     def __init__(
         self,
-        data: List[Dict[str, Any]],
+        original_statement: str,
+        proof_str: str,
+        idx: int,
+        tokenizer,
+        max_seq_length: int,
+        threshold_positive: float,
+        threshold_negative: float,
+    ):
+        encoded_statement = tokenizer(
+            original_statement,
+            padding="max_length",
+            truncation=True,
+            max_length=max_seq_length,
+            return_tensors="pt"
+        )
+
+        self.input_ids = encoded_statement["input_ids"].squeeze(0)
+        self.attention_mask = encoded_statement["attention_mask"].squeeze(0)
+        self.idx = idx
+        self.original_statement = original_statement
+        self.proof_str = proof_str
+        self.threshold_positive = threshold_positive
+        self.threshold_negative = threshold_negative
+        self.positive_distances = []
+        self.negative_distances = []
+
+    def add_distance(self, idx: int, distance: float):
+        if distance <= self.threshold_positive:
+            self.positive_distances.append((idx, distance))
+        elif distance >= self.threshold_negative:
+            self.negative_distances.append((idx, distance))
+
+    def has_enough_distances(self, neg_min: int, pos_min: int = 1) -> bool:
+        return len(self.positive_distances) >= pos_min and len(self.negative_distances) >= neg_min
+
+
+class TrainingDataset(Dataset):
+    def __init__(
+        self,
+        data: List[List[Dict[str, Any]]],
         tokenizer,
         max_seq_length: int,
         threshold_pos: float,
@@ -60,28 +88,40 @@ class TheoremDataset(Dataset):
         samples_from_single_anchor: int,
         k_negatives: int,
     ):
-        self.data = data
         self.tokenizer = tokenizer
         self.max_seq_length = max_seq_length
         self.threshold_pos = threshold_pos
         self.threshold_neg = threshold_neg
         self.k_negatives = k_negatives
 
-        self.statements: List[str] = [d["statement"] for d in data]
-        self.proofs: List[str] = [d["proofString"] for d in data]
+        self.encoded_data_grouped = []
+        self.items_dict = {}
 
-        self.encoded_statements = [
-            tokenizer(
-                s,
-                padding="max_length",
-                truncation=True,
-                max_length=max_seq_length,
-                return_tensors="pt"
-            )
-            for s in self.statements
-        ]
+        item_index = 0
+        for file in data:
+            file_items = []
+            for theorem in file:
+                item = DatasetItem(
+                    theorem["statement"],
+                    theorem["proofString"],
+                    item_index,
+                    tokenizer,
+                    max_seq_length,
+                    threshold_pos,
+                    threshold_neg,
+                )
+                file_items.append(item)
+                self.items_dict[item_index] = item
+                item_index += 1
+            self.encoded_data_grouped.append(file_items)
 
-        self.distances = self._calculate_distances(samples_from_single_anchor)
+        self.vectorizer = TfidfVectorizer(
+            ngram_range=(1,2),
+            max_features=5000,
+            analyzer="word",
+        ).fit([item.original_statement for item in self.items_dict.values()])
+
+        self._calculate_distances(samples_from_single_anchor)
 
     """
     Calculates the distance between all pairs of proofs
@@ -90,36 +130,45 @@ class TheoremDataset(Dataset):
     def _calculate_distances(
         self,
         max_samples_from_id: int
-    ) -> Dict[int, PrecomputedDistances]:
+    ):
         logger.info("Preparing distances between proofs")
 
-        dist_dict = {}
+        file_indices = list(range(len(self.encoded_data_grouped)))
+        for file_index, file in enumerate(self.encoded_data_grouped):
+            for ds_item in tqdm(file, desc=f"Calculating distances for file #{file_index}", leave=False):
+                # Stage 1: Calculate distances to all statements from
+                # the same file
 
-        i_indices = list(range(len(self.data)))
-        random.shuffle(i_indices)
+                for other_ds_item in file:
+                    if ds_item.idx == other_ds_item.idx:
+                        continue
+                    dist = proof_distance(
+                        ds_item.proof_str,
+                        other_ds_item.proof_str,
+                        ds_item.original_statement,
+                        other_ds_item.original_statement,
+                        self.vectorizer
+                    )
+                    assert self.items_dict.get(other_ds_item.idx) is not None
+                    ds_item.add_distance(other_ds_item.idx, dist)
 
-        j_indices = list(range(len(self.data)))
-        random.shuffle(j_indices)
+                # Stage 2: Calculate distances to k randomly chosen
+                # statements in other files
+                for _ in range(max_samples_from_id):
+                    other_file_indices = [file for file in file_indices if file != file_index]
+                    other_file_index = random.choice(other_file_indices)
 
-        for i in tqdm(i_indices, desc="Calculating distances", leave=False):
-            possible_js = random.sample(j_indices, min(max_samples_from_id, len(j_indices)))
-            dist_dict[i] = PrecomputedDistances(i)
+                    other_statement: DatasetItem = random.choice(self.encoded_data_grouped[other_file_index])
+                    dist = proof_distance(
+                        other_statement.proof_str,
+                        ds_item.proof_str,
+                        other_statement.original_statement,
+                        ds_item.original_statement,
+                        self.vectorizer
+                    )
 
-            for j in possible_js:
-                if i == j:
-                    continue
-                dist = proof_distance(self.proofs[i], self.proofs[j])
-
-                # To avoid that (i, j) and (j, i) have different
-                # distances just in case precision goes brrr
-                dist = round(dist, 4)
-
-                if dist <= self.threshold_pos:
-                    dist_dict[i].positive_distances.append((j, dist))
-                elif dist >= self.threshold_neg:
-                    dist_dict[i].negative_distances.append((j, dist))
-
-        return dist_dict
+                    assert self.items_dict.get(other_statement.idx) is not None
+                    ds_item.add_distance(other_statement.idx, dist)
 
     def __len__(self):
         # Infinite length (due to step-based training)
@@ -127,27 +176,26 @@ class TheoremDataset(Dataset):
 
     def __getitem__(self, index: int):
         while True:
-            anchor_idx: int = random.choice(list(self.distances.keys()))
-            anchor_distances = self.distances[anchor_idx]
+            anchor_idx: int = random.choice(list(self.items_dict.keys()))
+            anchor_item = self.items_dict[anchor_idx]
 
-            if anchor_distances.has_enough_distances(self.k_negatives):
+            if anchor_item.has_enough_distances(neg_min=self.k_negatives):
                 break
 
-        pos_idx, pos_dist = random.choice(anchor_distances.positive_distances)
-        neg_samples = random.sample(anchor_distances.negative_distances, self.k_negatives)
-        neg_indices, neg_distances = zip(*neg_samples)
+        pos_idx, pos_dist = random.choice(anchor_item.positive_distances)
+        pos_item = self.items_dict[pos_idx]
 
-        anchor_enc = self.encoded_statements[anchor_idx]
-        pos_encodings = self.encoded_statements[pos_idx]
-        neg_encodings = [self.encoded_statements[neg_idx] for neg_idx in neg_indices]
+        neg_samples = random.sample(anchor_item.negative_distances, self.k_negatives)
+        neg_indices, neg_distances = zip(*neg_samples)
+        neg_items = [self.items_dict[neg_idx] for neg_idx in neg_indices]
 
         return {
-            "input_ids_anchor": anchor_enc["input_ids"].squeeze(0),
-            "attention_mask_anchor": anchor_enc["attention_mask"].squeeze(0),
-            "input_ids_positive": pos_encodings["input_ids"].squeeze(0),
-            "attention_mask_positive": pos_encodings["attention_mask"].squeeze(0),
-            "input_ids_negatives": stack([neg["input_ids"].squeeze(0) for neg in neg_encodings]),
-            "attention_mask_negatives": stack([neg["attention_mask"].squeeze(0) for neg in neg_encodings]),
+            "input_ids_anchor": anchor_item.input_ids,
+            "attention_mask_anchor": anchor_item.attention_mask,
+            "input_ids_positive": pos_item.input_ids,
+            "attention_mask_positive": pos_item.attention_mask,
+            "input_ids_negatives": stack([neg_item.input_ids for neg_item in neg_items]),
+            "attention_mask_negatives": stack([neg_item.attention_mask for neg_item in neg_items]),
             "anchor_idx": anchor_idx,
             "positive_idx": pos_idx,
             "negative_idxs": neg_indices,
@@ -156,260 +204,134 @@ class TheoremDataset(Dataset):
         }
 
 
-    def pprintTriplet(self, triplet: Triplet):
-        def removeNewlines(s: str):
-            return s.replace("\n", " ")
-
-        print(f"""
-        Anchor Statement: {removeNewlines(self.statements[triplet.anchor])}
-        Positive Statement: {removeNewlines(self.statements[triplet.positive])}
-        Negative Statement: {removeNewlines(self.statements[triplet.negative])}
-        
-        Anchor Proof: {removeNewlines(self.proofs[triplet.anchor])}
-        Positive Proof: {removeNewlines(self.proofs[triplet.positive])}
-        Distance to Positive Proof: {triplet.positive_distance}
-        
-        Anchor Proof: {removeNewlines(self.proofs[triplet.anchor])}
-        Negative Proof: {removeNewlines(self.proofs[triplet.negative])}
-        Distance to Negative Proof: {triplet.negative_distance}
-        """)
-
-
 class ValidationDataset(Dataset):
     def __init__(
         self,
-        data: List[Dict[str, Any]],
+        data: List[List[Dict[str, Any]]],
         tokenizer,
         max_seq_length: int,
         threshold_pos: float,
         threshold_neg: float,
         samples_from_single_anchor: int,
         k_negatives: int,
+        query_size_in_eval: int,
     ):
-        self.data = data
         self.tokenizer = tokenizer
         self.max_seq_length = max_seq_length
         self.threshold_pos = threshold_pos
         self.threshold_neg = threshold_neg
         self.k_negatives = k_negatives
+        self.query_size_in_eval = query_size_in_eval
 
-        self.statements: List[str] = [d["statement"] for d in data]
-        self.proofs: List[str] = [d["proofString"] for d in data]
+        self.encoded_data_grouped = []
+        self.items_dict = {}
 
-        self.encoded_statements = [
-            tokenizer(
-                s,
-                padding="max_length",
-                truncation=True,
-                max_length=max_seq_length,
-                return_tensors="pt"
-            )
-            for s in self.statements
-        ]
+        item_index = 0
+        for file in data:
+            file_items = []
+            for theorem in file:
+                item = DatasetItem(
+                    theorem["statement"],
+                    theorem["proofString"],
+                    item_index,
+                    tokenizer,
+                    max_seq_length,
+                    threshold_pos,
+                    threshold_neg,
+                )
+                file_items.append(item)
+                self.items_dict[item_index] = item
+                item_index += 1
+            self.encoded_data_grouped.append(file_items)
 
-        self.distances = self._calculate_distances(samples_from_single_anchor)
+        self.vectorizer = TfidfVectorizer(
+            ngram_range=(1, 2),
+            max_features=5000,
+            analyzer="word",
+        ).fit([item.original_statement for item in self.items_dict.values()])
+
+        self._calculate_distances(samples_from_single_anchor)
 
     """
     Calculates the distance between all pairs of proofs
     @param max_samples_from_id: How many positive and negative samples to take from each proof
     """
+
     def _calculate_distances(
         self,
         max_samples_from_id: int
-    ) -> Dict[int, PrecomputedDistances]:
+    ):
         logger.info("Preparing distances between proofs")
 
-        dist_dict = {}
+        file_indices = list(range(len(self.encoded_data_grouped)))
+        for file_index, file in enumerate(self.encoded_data_grouped):
+            for ds_item in tqdm(file, desc=f"Calculating distances for file #{file_index}", leave=False):
+                # Stage 1: Calculate distances to all statements from
+                # the same file
 
-        i_indices = list(range(len(self.data)))
-        random.shuffle(i_indices)
+                for other_ds_item in file:
+                    if ds_item.idx == other_ds_item.idx:
+                        continue
+                    dist = proof_distance(
+                        ds_item.proof_str,
+                        other_ds_item.proof_str,
+                        ds_item.original_statement,
+                        other_ds_item.original_statement,
+                        self.vectorizer
+                    )
+                    ds_item.add_distance(other_ds_item.idx, dist)
 
-        j_indices = list(range(len(self.data)))
-        random.shuffle(j_indices)
+                # Stage 2: Calculate distances to k randomly chosen
+                # statements in other files
+                for _ in range(max_samples_from_id):
+                    other_file_indices = [file for file in file_indices if file != file_index]
+                    other_file_index = random.choice(other_file_indices)
 
-        for i in tqdm(i_indices, desc="Calculating distances", leave=False):
-            possible_js = random.sample(j_indices, min(max_samples_from_id, len(j_indices)))
-            dist_dict[i] = PrecomputedDistances(i)
-
-            for j in possible_js:
-                if i == j:
-                    continue
-                dist = proof_distance(self.proofs[i], self.proofs[j])
-
-                # To avoid that (i, j) and (j, i) have different
-                # distances just in case precision goes brrr
-                dist = round(dist, 4)
-
-                if dist <= self.threshold_pos:
-                    dist_dict[i].positive_distances.append((j, dist))
-                elif dist >= self.threshold_neg:
-                    dist_dict[i].negative_distances.append((j, dist))
-
-        return dist_dict
+                    other_statement: DatasetItem = random.choice(self.encoded_data_grouped[other_file_index])
+                    dist = proof_distance(
+                        other_statement.proof_str,
+                        ds_item.proof_str,
+                        other_statement.original_statement,
+                        ds_item.original_statement,
+                        self.vectorizer
+                    )
+                    ds_item.add_distance(other_statement.idx, dist)
 
     def __len__(self):
         # Infinite length (due to step-based training)
         return int(1e9)
 
-    def __getitem__(self, index: int, max_samples_for_ranking: int = 20):
+    def __getitem__(self, index: int):
         while True:
-            anchor_idx: int = random.choice(list(self.distances.keys()))
-            anchor_distances = self.distances[anchor_idx]
+            anchor_idx: int = random.choice(list(self.items_dict.keys()))
+            anchor_item = self.items_dict[anchor_idx]
 
-            if anchor_distances.has_enough_distances(max_samples_for_ranking - 1):
+            if anchor_item.has_enough_distances(neg_min=self.query_size_in_eval - 1):
                 break
 
         # Choose the fraction of positive samples between 0.2 and 0.5
         pos_fraction = random.uniform(0.1, 0.5)
-        number_of_pos_samples = min(int(max_samples_for_ranking * pos_fraction), len(anchor_distances.positive_distances))
-        number_of_neg_samples = max_samples_for_ranking - number_of_pos_samples
+        number_of_pos_samples = min(int(self.query_size_in_eval * pos_fraction), len(anchor_item.positive_distances))
+        number_of_neg_samples = self.query_size_in_eval - number_of_pos_samples
 
-        pos_samples = random.sample(anchor_distances.positive_distances, number_of_pos_samples)
-        neg_samples = random.sample(anchor_distances.negative_distances, number_of_neg_samples)
+        pos_samples: List[Tuple[int, float]] = random.sample(anchor_item.positive_distances, number_of_pos_samples)
+        neg_samples: List[Tuple[int, float]] = random.sample(anchor_item.negative_distances, number_of_neg_samples)
 
         all_samples = pos_samples + neg_samples
         random.shuffle(all_samples)
 
-        indices, distances = zip(*all_samples)
-        anchor_enc = self.encoded_statements[anchor_idx]
-        other_encodings = [self.encoded_statements[idx] for idx in indices]
+        query_indices, distances = zip(*all_samples)
+        other_items = [self.items_dict[index] for index in query_indices]
 
         return {
-            "input_ids_anchor": anchor_enc["input_ids"].squeeze(0),
-            "attention_mask_anchor": anchor_enc["attention_mask"].squeeze(0),
-            "input_ids_others": stack([other["input_ids"].squeeze(0) for other in other_encodings]),
-            "attention_mask_others": stack([other["attention_mask"].squeeze(0) for other in other_encodings]),
+            "input_ids_anchor": anchor_item.input_ids,
+            "attention_mask_anchor": anchor_item.attention_mask,
+            "input_ids_others": stack([other_item.input_ids for other_item in other_items]),
+            "attention_mask_others": stack([other_item.attention_mask for other_item in other_items]),
             "anchor_idx": anchor_idx,
-            "other_idxs": indices,
+            "other_idxs": query_indices,
             "distances": distances,
         }
-
-
-class PairTheoremDataset(Dataset):
-    def __init__(
-        self,
-        data: List[Dict[str, Any]],
-        tokenizer,
-        max_seq_length: int,
-        threshold_pos: float,
-        threshold_neg: float,
-        _samples_from_single_anchor: int
-    ):
-        self.data = data
-        self.tokenizer = tokenizer
-        self.max_seq_length = max_seq_length
-        self.threshold_pos = threshold_pos
-        self.threshold_neg = threshold_neg
-
-        self.statements: List[str] = [d["statement"] for d in data]
-        self.proofs: List[str] = [d["proofString"] for d in data]
-
-        self.encoded_statements = [
-            tokenizer(
-                s,
-                padding="max_length",
-                truncation=True,
-                max_length=max_seq_length,
-                return_tensors="pt"
-            )
-            for s in self.statements
-        ]
-
-        self.proof_distances = self._calculate_distances(100)
-        self.dataset_samples = self._create_pairs_dataset()
-
-    def _create_pairs_dataset(self) -> List[Dict[str, Any]]:
-        negative_pairs = set()
-        positive_pairs = set()
-
-        for i in range(len(self.proof_distances)):
-            distances = self.proof_distances[i]
-
-            for j, dist in distances:
-                if dist <= self.threshold_pos:
-                    positive_pairs.add((i, j, dist))
-                else:
-                    negative_pairs.add((i, j, dist))
-
-        positive_pairs = list(positive_pairs)
-        negative_pairs = list(negative_pairs)
-
-        random.shuffle(positive_pairs)
-        random.shuffle(negative_pairs)
-        min_class_size = min(len(positive_pairs), len(negative_pairs))
-
-        positive_pairs = positive_pairs[:min_class_size]
-        negative_pairs = negative_pairs[:min_class_size]
-
-        pairs = positive_pairs + negative_pairs
-        random.shuffle(pairs)
-
-        pairs = [self.__contrastive_item(p) for p in pairs]
-        return pairs
-
-    def __contrastive_item(self, distanced_pair: Tuple[int, int, float]):
-        i, j, dist = distanced_pair
-
-        input_i = self.encoded_statements[i]
-        input_j = self.encoded_statements[j]
-
-        if dist <= self.threshold_pos:
-            label = 1
-        else:
-            label = 0
-
-        input_ids_i = input_i["input_ids"].squeeze(0)
-        attention_mask_i = input_i["attention_mask"].squeeze(0)
-
-        input_ids_j = input_j["input_ids"].squeeze(0)
-        attention_mask_j = input_j["attention_mask"].squeeze(0)
-
-        return {
-            "input_ids_i": input_ids_i,
-            "attention_mask_i": attention_mask_i,
-            "input_ids_j": input_ids_j,
-            "attention_mask_j": attention_mask_j,
-            "dist": dist,
-            "label": label,
-            "idx_i": i,
-            "idx_j": j
-        }
-
-    def __len__(self):
-        return len(self.dataset_samples)
-
-    def __getitem__(self, index: int):
-        return self.dataset_samples[index]
-
-    def _calculate_distances(
-        self,
-        max_samples_from_id: int
-    ) -> Dict[int, List[Tuple[int, float]]]:
-        logger.info("Preparing distances between proofs")
-
-        dist_dict = {}
-
-        i_indices = list(range(len(self.data)))
-        random.shuffle(i_indices)
-
-        j_indices = list(range(len(self.data)))
-        random.shuffle(j_indices)
-
-        for i in tqdm(i_indices, desc="Calculating distances", leave=False):
-            possible_js = random.sample(j_indices, min(max_samples_from_id, len(j_indices)))
-            for j in possible_js:
-                if i == j:
-                    continue
-                dist = proof_distance(self.proofs[i], self.proofs[j])
-
-                # To avoid that (i, j) and (j, i) have different
-                # distances just in case precision goes brrr
-                dist = round(dist, 4)
-
-                dist_dict.setdefault(i, [])
-                dist_dict[i].append((j, dist))
-
-        return dist_dict
 
 
 class RankingDataset:
@@ -499,72 +421,112 @@ class RankingDataset:
         return sum(scores) / len(scores) if scores else 0.0
 
 
-def visualize_dataset(dataset, save_dir="dataset_visualizations", sample_size=1000):
+import os
+import random
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from typing import Any
+
+def visualize_dataset(dataset: Any, save_dir: str = "dataset_visualizations"):
     os.makedirs(save_dir, exist_ok=True)
+    sns.set(style="whitegrid")
 
-    proof_lengths = []
-    proof_distances_pos = []
-    proof_distances_neg = []
-    hypotheses_counts = []
+    dist_records = []
+    anchor_records = []
+    for item in dataset.items_dict.values():
+        pos_ds = [d for _, d in item.positive_distances]
+        neg_ds = [d for _, d in item.negative_distances]
+        if not pos_ds or not neg_ds:
+            continue
 
-    distances = dataset.distances
-    for anchor_id, precomputed in distances.items():
-        for j, dist in precomputed.positive_distances:
-            proof_distances_pos.append(dist)
-        for j, dist in precomputed.negative_distances:
-            proof_distances_neg.append(dist)
+        dist_records += [{"distance": d, "type": "positive"} for d in pos_ds]
+        dist_records += [{"distance": d, "type": "negative"} for d in neg_ds]
 
-    sample_statements = random.sample(dataset.statements, min(sample_size, len(dataset.statements)))
-    for stmt in sample_statements:
-        tokenized = dataset.tokenizer(stmt, truncation=True, padding=False)
-        proof_lengths.append(len(tokenized["input_ids"]))
-        # Hypotheses roughly counted by parentheses ( (x : A) )
-        hypotheses_count = stmt.count(":")
-        hypotheses_counts.append(hypotheses_count)
+        proof_len = len(split_tactics(item.proof_str))
+        hypo_count = item.original_statement.count(":")
+        anchor_records.append({
+            "length": proof_len,
+            "hypotheses": hypo_count,
+            "mean_pos": np.mean(pos_ds),
+            "mean_neg": np.mean(neg_ds)
+        })
 
-    plt.figure(figsize=(8,6))
-    plt.hist(proof_distances_pos, bins=30, alpha=0.7, label='Positive Distances')
-    plt.hist(proof_distances_neg, bins=30, alpha=0.7, label='Negative Distances')
+    df_dist = pd.DataFrame(dist_records)
+    df_anchor = pd.DataFrame(anchor_records)
+
+    plt.figure(figsize=(10,6))
+    sns.histplot(data=df_dist, x="distance", hue="type",
+                 bins=30, kde=True, stat="density", common_norm=False, alpha=0.6)
+
+    for t in ["positive", "negative"]:
+        q = [0.25, 0.5, 0.75]
+        qs = df_dist[df_dist.type == t].distance.quantile(q)
+        for qi, v in zip(q, qs):
+            plt.axvline(v, linestyle="--", label=f"{t} Q{int(qi*100)}", alpha=0.7)
+    plt.title("Proof Distance Distribution with KDE and Quartiles")
+    plt.xlabel("Distance"); plt.ylabel("Density")
     plt.legend()
-    plt.title("Distribution of Proof Distances")
-    plt.xlabel("Distance")
-    plt.ylabel("Frequency")
-    plt.savefig(os.path.join(save_dir, "distance_distribution.png"))
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_dir, "distance_kde_quartiles.png"))
     plt.close()
 
     plt.figure(figsize=(8,6))
-    sns.histplot(proof_lengths, bins=30, kde=True)
-    plt.title("Statement Token Lengths")
-    plt.xlabel("Number of tokens")
-    plt.ylabel("Frequency")
-    plt.savefig(os.path.join(save_dir, "statement_lengths.png"))
+    sns.violinplot(x="type", y="distance", data=df_dist, inner="quartile", scale="width")
+    plt.title("Violin Plot of Proof Distances")
+    plt.xlabel("Pair Type"); plt.ylabel("Distance")
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_dir, "distance_violin.png"))
     plt.close()
 
     plt.figure(figsize=(8,6))
-    sns.histplot(hypotheses_counts, bins=30, kde=True)
-    plt.title("Hypotheses per Statement")
-    plt.xlabel("Hypotheses count (rough estimate)")
-    plt.ylabel("Frequency")
-    plt.savefig(os.path.join(save_dir, "hypotheses_counts.png"))
+    sns.ecdfplot(data=df_dist, x="distance", hue="type")
+    plt.title("Empirical CDF of Proof Distances")
+    plt.xlabel("Distance"); plt.ylabel("CDF")
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_dir, "distance_ecdf.png"))
     plt.close()
 
-    with open(os.path.join(save_dir, "examples.txt"), "w") as f:
-        anchors = random.sample(list(distances.keys()), min(20, len(distances)))
-        for anchor_id in anchors:
-            anchor_stmt = dataset.statements[anchor_id]
-            positives = distances[anchor_id].positive_distances
-            negatives = distances[anchor_id].negative_distances
-            if positives and negatives:
-                pos_idx, pos_dist = random.choice(positives)
-                neg_idx, neg_dist = random.choice(negatives)
+    plt.figure(figsize=(8,6))
+    sns.scatterplot(data=df_anchor, x="length", y="mean_pos", alpha=0.6)
+    sns.regplot(data=df_anchor, x="length", y="mean_pos", scatter=False, color="red", ci=95)
+    plt.title("Proof Length vs. Mean Positive Distance")
+    plt.xlabel("Proof Length (# tactics)"); plt.ylabel("Mean Positive Distance")
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_dir, "length_vs_mean_pos.png"))
+    plt.close()
 
-                pos_stmt = dataset.statements[pos_idx]
-                neg_stmt = dataset.statements[neg_idx]
+    plt.figure(figsize=(8,6))
+    sns.scatterplot(data=df_anchor, x="hypotheses", y="mean_neg", alpha=0.6)
+    sns.regplot(data=df_anchor, x="hypotheses", y="mean_neg", scatter=False, color="red", ci=95)
+    plt.title("Hypotheses Count vs. Mean Negative Distance")
+    plt.xlabel("Hypotheses Count"); plt.ylabel("Mean Negative Distance")
+    plt.tight_layout()
+    plt.savefig(os.path.join(save_dir, "hypotheses_vs_mean_neg.png"))
+    plt.close()
 
-                f.write(f"ANCHOR: {anchor_stmt}\n")
-                f.write(f"  POSITIVE (d={pos_dist:.4f}): {pos_stmt}\n")
-                f.write(f"  NEGATIVE (d={neg_dist:.4f}): {neg_stmt}\n")
-                f.write("\n")
+    sns.pairplot(df_anchor, vars=["length", "hypotheses", "mean_pos", "mean_neg"], corner=True)
+    plt.suptitle("Pairplot of Anchor Summary Statistics", y=1.02)
+    plt.savefig(os.path.join(save_dir, "anchor_pairplot.png"))
+    plt.close()
 
-    print(f"Visualizations and examples saved to {save_dir}")
+    ex_file = os.path.join(save_dir, "sample_examples.md")
+    with open(ex_file, "w") as f:
+        keys = list(dataset.items_dict.keys())
+        random.shuffle(keys)
+        for idx in keys[:20]:
+            item = dataset.items_dict[idx]
+            f.write(f"### Anchor #{idx}\n")
+            f.write(f"Statement: `{item.original_statement}`  \n")
+            f.write(f"Proof: ```\n{item.proof_str}\n```  \n")
+            if item.positive_distances:
+                j,d = random.choice(item.positive_distances)
+                f.write(f"- Positive Example (d={d:.3f}): `{dataset.items_dict[j].original_statement}`\n")
+            if item.negative_distances:
+                k,d = random.choice(item.negative_distances)
+                f.write(f"- Negative Example (d={d:.3f}): `{dataset.items_dict[k].original_statement}`\n")
+            f.write("\n")
+
+    print(f"All visualizations saved under {save_dir}")
 
