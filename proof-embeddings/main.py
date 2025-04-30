@@ -49,7 +49,7 @@ def main(cfg_path: str = "config.yaml"):
     train_dataset = TrainingDataset(
         train_data, tokenizer, cfg.max_seq_length,
         cfg.threshold_pos, cfg.threshold_neg,
-        cfg.samples_from_single_anchor,
+        cfg.threshold_hard_neg, cfg.samples_from_single_anchor,
         cfg.k_negatives
     )
 
@@ -60,14 +60,14 @@ def main(cfg_path: str = "config.yaml"):
     val_dataset = TrainingDataset(
         val_data, tokenizer, cfg.max_seq_length,
         cfg.threshold_pos, cfg.threshold_neg,
-        cfg.samples_from_single_anchor,
+        cfg.threshold_hard_neg, cfg.samples_from_single_anchor,
         cfg.k_negatives
     )
 
     val_dataset_ranking = ValidationDataset(
         val_data, tokenizer, cfg.max_seq_length,
         cfg.threshold_pos, cfg.threshold_neg,
-        cfg.samples_from_single_anchor,
+        cfg.threshold_hard_neg, cfg.samples_from_single_anchor,
         cfg.k_negatives, cfg.evaluation.query_size_in_eval
     )
 

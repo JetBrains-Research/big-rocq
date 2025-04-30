@@ -1,5 +1,5 @@
 project_name: "coq-theorem-embedding"
-experiment_name: "infonce-file-normalized-ds"
+experiment_name: "infonce-file-batch-by-file"
 log_level: "INFO"
 
 dataset_path: "./data/"
@@ -21,12 +21,15 @@ margin: 0.25
 threshold_pos: 0.3
 # proof distance >= threshold -> negative
 threshold_neg: 0.65
+threshold_hard_neg: 0.45
 k_negatives: 4
 
 steps: 100000
 eval_steps: 200
 evaluate_freq: 100
+save_freq: 300
 batch_size: 32
+warmup_ratio: 0.1
 learning_rate: 4e-6
 random_seed: 52
 

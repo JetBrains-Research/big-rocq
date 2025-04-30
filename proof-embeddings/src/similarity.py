@@ -11,12 +11,10 @@ def split_tactics(proof_text: str) -> list[str]:
     return [s.strip() for s in raw if s.strip()]
 
 
-def statement_distance(s1: str, s2: str, vectorizer) -> float:
+def statement_distance(v1: str, v2: str) -> float:
     """
     1 - cosine( tfidf(s1), tfidf(s2) ), in [0,1].
     """
-    v1 = vectorizer.transform([s1])
-    v2 = vectorizer.transform([s2])
     sim = cosine_similarity(v1, v2)[0, 0]
     return 1.0 - float(sim)
 
@@ -59,7 +57,7 @@ def jitter(dist: float, eps: float = 1e-3) -> float:
     return float(np.clip(dist + random.uniform(-eps, +eps), 0.0, 1.0))
 
 
-def proof_distance(proof1: str, proof2: str, stmt1: str, stmt2: str, vectorizer) -> float:
+def proof_distance(proof1: str, proof2: str, stmt1_transformed: str, stmt2_transformed: str) -> float:
     """
     Levenshtein distance at the sequence level, but:
      - cost of insertion = 1
@@ -96,12 +94,13 @@ def proof_distance(proof1: str, proof2: str, stmt1: str, stmt2: str, vectorizer)
 
     proof_dist = dp[n1][n2] / float(max_len)
 
-    stmt_dist = statement_distance(stmt1, stmt2, vectorizer)
+    # stmt_dist = statement_distance(stmt1_transformed, stmt2_transformed)
 
     tac_dist = tactics_jaccard(proof1, proof2)
 
-    a, b, g = 0.7, 0.15, 0.15
-    composite = a * proof_dist + b * stmt_dist + g * tac_dist
+    a, _, g = 0.8, 0.2, 0.2
+    # composite = a * proof_dist + b * stmt_dist + g * tac_dist
+    composite = a * proof_dist + g * tac_dist
     composite = jitter(composite, eps=1e-3)
 
     rounded_dist = round(float(np.clip(composite, 0.0, 1.0)), 5)

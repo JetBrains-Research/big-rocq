@@ -3,6 +3,7 @@ import wandb
 from tqdm import tqdm
 import torch.nn.functional as F
 import logging
+from transformers import get_linear_schedule_with_warmup
 
 from .dataloader import DynamicQueryDataLoader, RankingDataLoader
 from .losses import InfoNCELoss
@@ -201,6 +202,15 @@ def train_loop(
     loss_fn = InfoNCELoss(temperature=0.07).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.learning_rate)
 
+    total_steps = cfg.steps
+    warmup_steps = int(cfg.warmup_ratio * total_steps)
+
+    scheduler = get_linear_schedule_with_warmup(
+        optimizer,
+        num_warmup_steps=warmup_steps,
+        num_training_steps=total_steps,
+    )
+
     train_loader = DynamicQueryDataLoader(train_dataset, batch_size=cfg.batch_size)
     val_loader = DynamicQueryDataLoader(val_dataset, batch_size=cfg.batch_size)
     val_ranking_loader = RankingDataLoader(val_dataset_ranking, batch_size=cfg.batch_size)
@@ -214,6 +224,7 @@ def train_loop(
             loss = train_one_step(model, loss_fn, batch, optimizer, device)
             train_losses.append(loss)
 
+            scheduler.step()
             step += 1
 
             if step % cfg.evaluate_freq == 0 or step == cfg.steps:

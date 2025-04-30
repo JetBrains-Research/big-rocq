@@ -48,6 +48,8 @@ class DatasetItem:
         max_seq_length: int,
         threshold_positive: float,
         threshold_negative: float,
+        threshold_hard_negative: float,
+        vectorizer: TfidfVectorizer,
     ):
         encoded_statement = tokenizer(
             original_statement,
@@ -64,14 +66,20 @@ class DatasetItem:
         self.proof_str = proof_str
         self.threshold_positive = threshold_positive
         self.threshold_negative = threshold_negative
+        self.threshold_hard_negative = threshold_hard_negative
         self.positive_distances = []
         self.negative_distances = []
+        self.tf_idf_normalized = vectorizer.transform([original_statement])
 
     def add_distance(self, idx: int, distance: float):
         if distance <= self.threshold_positive:
             self.positive_distances.append((idx, distance))
         elif distance >= self.threshold_negative:
             self.negative_distances.append((idx, distance))
+        elif distance >= self.threshold_hard_negative:
+            thirty_percent_chance = random.uniform(0, 1)
+            if thirty_percent_chance <= 0.3:
+                self.negative_distances.append((idx, distance))
 
     def has_enough_distances(self, neg_min: int, pos_min: int = 1) -> bool:
         return len(self.positive_distances) >= pos_min and len(self.negative_distances) >= neg_min
@@ -85,6 +93,7 @@ class TrainingDataset(Dataset):
         max_seq_length: int,
         threshold_pos: float,
         threshold_neg: float,
+        threshold_hard_neg: float,
         samples_from_single_anchor: int,
         k_negatives: int,
     ):
@@ -92,13 +101,28 @@ class TrainingDataset(Dataset):
         self.max_seq_length = max_seq_length
         self.threshold_pos = threshold_pos
         self.threshold_neg = threshold_neg
+        self.threshold_hard_neg = threshold_hard_neg
         self.k_negatives = k_negatives
 
         self.encoded_data_grouped = []
+
+        self.ds_statements = []
+        for file in data:
+            for theorem in file:
+                self.ds_statements.append(theorem["statement"])
+
+        self.vectorizer: TfidfVectorizer = TfidfVectorizer(
+            ngram_range=(1, 2),
+            max_features=5000,
+            analyzer="word",
+        )
+        self.vectorizer.fit(self.ds_statements)
+
         self.items_dict = {}
 
         item_index = 0
-        for file in data:
+        self.biggest_index = 0
+        for file in tqdm(data, desc=f"Precomputing items in files", leave=False):
             file_items = []
             for theorem in file:
                 item = DatasetItem(
@@ -109,17 +133,14 @@ class TrainingDataset(Dataset):
                     max_seq_length,
                     threshold_pos,
                     threshold_neg,
+                    threshold_hard_neg,
+                    self.vectorizer
                 )
                 file_items.append(item)
                 self.items_dict[item_index] = item
+                self.biggest_index = item_index
                 item_index += 1
             self.encoded_data_grouped.append(file_items)
-
-        self.vectorizer = TfidfVectorizer(
-            ngram_range=(1,2),
-            max_features=5000,
-            analyzer="word",
-        ).fit([item.original_statement for item in self.items_dict.values()])
 
         self._calculate_distances(samples_from_single_anchor)
 
@@ -145,9 +166,8 @@ class TrainingDataset(Dataset):
                     dist = proof_distance(
                         ds_item.proof_str,
                         other_ds_item.proof_str,
-                        ds_item.original_statement,
-                        other_ds_item.original_statement,
-                        self.vectorizer
+                        ds_item.tf_idf_normalized,
+                        other_ds_item.tf_idf_normalized,
                     )
                     assert self.items_dict.get(other_ds_item.idx) is not None
                     ds_item.add_distance(other_ds_item.idx, dist)
@@ -162,9 +182,8 @@ class TrainingDataset(Dataset):
                     dist = proof_distance(
                         other_statement.proof_str,
                         ds_item.proof_str,
-                        other_statement.original_statement,
-                        ds_item.original_statement,
-                        self.vectorizer
+                        other_statement.tf_idf_normalized,
+                        ds_item.tf_idf_normalized
                     )
 
                     assert self.items_dict.get(other_statement.idx) is not None
@@ -175,12 +194,14 @@ class TrainingDataset(Dataset):
         return int(1e9)
 
     def __getitem__(self, index: int):
+        anchor_idx: int = index % (self.biggest_index + 1)
+        anchor_item = self.items_dict[anchor_idx]
         while True:
-            anchor_idx: int = random.choice(list(self.items_dict.keys()))
-            anchor_item = self.items_dict[anchor_idx]
-
             if anchor_item.has_enough_distances(neg_min=self.k_negatives):
                 break
+
+            anchor_idx = random.choice(list(self.items_dict.keys()))
+            anchor_item = self.items_dict[anchor_idx]
 
         pos_idx, pos_dist = random.choice(anchor_item.positive_distances)
         pos_item = self.items_dict[pos_idx]
@@ -212,6 +233,7 @@ class ValidationDataset(Dataset):
         max_seq_length: int,
         threshold_pos: float,
         threshold_neg: float,
+        threshold_hard_neg: float,
         samples_from_single_anchor: int,
         k_negatives: int,
         query_size_in_eval: int,
@@ -220,14 +242,28 @@ class ValidationDataset(Dataset):
         self.max_seq_length = max_seq_length
         self.threshold_pos = threshold_pos
         self.threshold_neg = threshold_neg
+        self.threshold_hard_neg = threshold_hard_neg
         self.k_negatives = k_negatives
         self.query_size_in_eval = query_size_in_eval
 
         self.encoded_data_grouped = []
         self.items_dict = {}
 
-        item_index = 0
+        self.ds_statements = []
         for file in data:
+            for theorem in file:
+                self.ds_statements.append(theorem["statement"])
+
+        self.vectorizer = TfidfVectorizer(
+            ngram_range=(1, 2),
+            max_features=5000,
+            analyzer="word",
+        )
+        self.vectorizer.fit(self.ds_statements)
+
+        item_index = 0
+        self.biggest_index = 0
+        for file in tqdm(data, desc=f"Precomputing items in files", leave=False):
             file_items = []
             for theorem in file:
                 item = DatasetItem(
@@ -238,17 +274,14 @@ class ValidationDataset(Dataset):
                     max_seq_length,
                     threshold_pos,
                     threshold_neg,
+                    threshold_hard_neg,
+                    self.vectorizer
                 )
                 file_items.append(item)
                 self.items_dict[item_index] = item
+                self.biggest_index = item_index
                 item_index += 1
             self.encoded_data_grouped.append(file_items)
-
-        self.vectorizer = TfidfVectorizer(
-            ngram_range=(1, 2),
-            max_features=5000,
-            analyzer="word",
-        ).fit([item.original_statement for item in self.items_dict.values()])
 
         self._calculate_distances(samples_from_single_anchor)
 
@@ -275,9 +308,8 @@ class ValidationDataset(Dataset):
                     dist = proof_distance(
                         ds_item.proof_str,
                         other_ds_item.proof_str,
-                        ds_item.original_statement,
-                        other_ds_item.original_statement,
-                        self.vectorizer
+                        ds_item.tf_idf_normalized,
+                        other_ds_item.tf_idf_normalized
                     )
                     ds_item.add_distance(other_ds_item.idx, dist)
 
@@ -291,9 +323,8 @@ class ValidationDataset(Dataset):
                     dist = proof_distance(
                         other_statement.proof_str,
                         ds_item.proof_str,
-                        other_statement.original_statement,
-                        ds_item.original_statement,
-                        self.vectorizer
+                        other_statement.tf_idf_normalized,
+                        ds_item.tf_idf_normalized
                     )
                     ds_item.add_distance(other_statement.idx, dist)
 
@@ -302,12 +333,14 @@ class ValidationDataset(Dataset):
         return int(1e9)
 
     def __getitem__(self, index: int):
+        anchor_idx: int = index % (self.biggest_index + 1)
+        anchor_item = self.items_dict[anchor_idx]
         while True:
-            anchor_idx: int = random.choice(list(self.items_dict.keys()))
-            anchor_item = self.items_dict[anchor_idx]
-
-            if anchor_item.has_enough_distances(neg_min=self.query_size_in_eval - 1):
+            if anchor_item.has_enough_distances(neg_min=self.k_negatives):
                 break
+
+            anchor_idx = random.choice(list(self.items_dict.keys()))
+            anchor_item = self.items_dict[anchor_idx]
 
         # Choose the fraction of positive samples between 0.2 and 0.5
         pos_fraction = random.uniform(0.1, 0.5)
@@ -368,6 +401,45 @@ class RankingDataset:
             [{**encode_statement(st), "original": st} for st in clique["clique"]]
             for clique in self.reference_premises
         ]
+
+    def string_similarity(self, s1: str, s2: str):
+        # Jaccard similarity
+
+        s1_set = set(s1.split())
+        s2_set = set(s2.split())
+
+        intersection = len(s1_set.intersection(s2_set))
+        union = len(s1_set.union(s2_set))
+
+        return intersection / union if union > 0 else 0.0
+
+    def test_get_accuracy_score(
+        self,
+        top_k: int = 6
+    ) -> float:
+        scores = []
+
+        for clique in self.cliques:
+            for anchor in clique:
+                similarity_scores = [(self.string_similarity(anchor["original"], x["original"]), i) for i, x in enumerate(self.encoded_statements)]
+                similarity_scores.sort(reverse=True, key=lambda x: x[0])
+
+                indices = [i for _, i in similarity_scores]
+
+                top_k_predicted = [
+                    self.encoded_statements[i]["original"]
+                    for i in indices[:top_k]
+                ]
+
+                clique_others = [x["original"] for x in clique if x["original"] != anchor["original"]]
+
+                score = len(
+                    set(clique_others) & set(top_k_predicted)
+                ) / min(len(clique_others), top_k)
+
+                scores.append(score)
+
+        return sum(scores) / len(scores) if scores else 0.0
 
     @torch.no_grad()
     def get_accuracy_score(
