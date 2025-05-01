@@ -5,10 +5,10 @@ from omegaconf import OmegaConf
 
 from .api import router
 
+
 def create_app() -> FastAPI:
     logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
     )
     application = FastAPI(
         title="Proof‐Similarity Service",
@@ -17,6 +17,7 @@ def create_app() -> FastAPI:
     )
     application.include_router(router)
     return application
+
 
 app = create_app()
 

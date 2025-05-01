@@ -1,22 +1,13 @@
 from Levenshtein import distance
-from sklearn.metrics.pairwise import cosine_similarity
 import random
 import re
 import numpy as np
 
 
 def split_tactics(proof_text: str) -> list[str]:
-    text = proof_text.replace('\n', ';')
-    raw = re.split(r'[.;]+', text)
+    text = proof_text.replace("\n", ";")
+    raw = re.split(r"[.;]+", text)
     return [s.strip() for s in raw if s.strip()]
-
-
-def statement_distance(v1: str, v2: str) -> float:
-    """
-    1 - cosine( tfidf(s1), tfidf(s2) ), in [0,1].
-    """
-    sim = cosine_similarity(v1, v2)[0, 0]
-    return 1.0 - float(sim)
 
 
 def tactics_jaccard(s1: str, s2: str) -> float:
@@ -57,7 +48,7 @@ def jitter(dist: float, eps: float = 1e-3) -> float:
     return float(np.clip(dist + random.uniform(-eps, +eps), 0.0, 1.0))
 
 
-def proof_distance(proof1: str, proof2: str, stmt1_transformed: str, stmt2_transformed: str) -> float:
+def proof_distance(proof1: str, proof2: str) -> float:
     """
     Levenshtein distance at the sequence level, but:
      - cost of insertion = 1
@@ -76,30 +67,24 @@ def proof_distance(proof1: str, proof2: str, stmt1_transformed: str, stmt2_trans
     if n1 == 0 or n2 == 0:
         return 1.0
 
-    dp = [[0.0]*(n2+1) for _ in range(n1+1)]
-    
-    for i in range(n1+1):
+    dp = [[0.0] * (n2 + 1) for _ in range(n1 + 1)]
+
+    for i in range(n1 + 1):
         dp[i][0] = float(i)
-    for j in range(n2+1):
+    for j in range(n2 + 1):
         dp[0][j] = float(j)
 
-    for i in range(1, n1+1):
-        for j in range(1, n2+1):
-            cost_sub = normalized_string_distance(sents1[i-1], sents2[j-1])
+    for i in range(1, n1 + 1):
+        for j in range(1, n2 + 1):
+            cost_sub = normalized_string_distance(sents1[i - 1], sents2[j - 1])
             dp[i][j] = min(
-                dp[i-1][j] + 1.0,
-                dp[i][j-1] + 1.0,
-                dp[i-1][j-1] + cost_sub
+                dp[i - 1][j] + 1.0, dp[i][j - 1] + 1.0, dp[i - 1][j - 1] + cost_sub
             )
 
     proof_dist = dp[n1][n2] / float(max_len)
-
-    # stmt_dist = statement_distance(stmt1_transformed, stmt2_transformed)
-
     tac_dist = tactics_jaccard(proof1, proof2)
 
-    a, _, g = 0.8, 0.2, 0.2
-    # composite = a * proof_dist + b * stmt_dist + g * tac_dist
+    a, g = 0.7, 0.3
     composite = a * proof_dist + g * tac_dist
     composite = jitter(composite, eps=1e-3)
 

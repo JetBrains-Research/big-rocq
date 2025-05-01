@@ -10,9 +10,10 @@ from datetime import datetime
 from .dataloader import DynamicQueryDataLoader, RankingDataLoader
 from .losses import InfoNCELoss
 from .metrics import precision_at_k, recall_at_k, f_scores, compute_correlation_scores
-from .model import BERTStatementEmbedder
+from .model import RocqStatementEmbedder
 
 logger = logging.getLogger(__name__)
+
 
 def train_one_step(
     model,
@@ -29,7 +30,7 @@ def train_one_step(
     anchor_mask = batch["attention_mask_anchor"].to(device)
     pos_ids = batch["input_ids_positive"].to(device)
     pos_mask = batch["attention_mask_positive"].to(device)
-    neg_ids = batch["input_ids_negatives"].to(device)  # [B, K, L]
+    neg_ids = batch["input_ids_negatives"].to(device)
     neg_mask = batch["attention_mask_negatives"].to(device)
 
     emb_anchor = model(anchor_ids, anchor_mask)
@@ -37,8 +38,7 @@ def train_one_step(
 
     batch_size, k_neg, seq_len = neg_ids.shape
     emb_negatives = model(
-        neg_ids.reshape(-1, seq_len),
-        neg_mask.reshape(-1, seq_len)
+        neg_ids.reshape(-1, seq_len), neg_mask.reshape(-1, seq_len)
     ).reshape(batch_size, k_neg, -1)
 
     loss = loss_fn(emb_anchor, emb_positive, emb_negatives)
@@ -75,28 +75,28 @@ def evaluate_ranking_ability(
         others_ids = batch["input_ids_others"].to(device)
         others_mask = batch["attention_mask_others"].to(device)
 
-        other_idxs = batch["other_idxs"].to(device)
-        true_distances = batch["distances"].to(device)
+        other_idxs = batch["other_idxs"]
+        true_distances = batch["distances"]
 
         emb_anchor = model(anchor_ids, anchor_mask)
         batch_size, others_count, seq_len = others_ids.shape
 
         emb_others = model(
-            others_ids.reshape(-1, seq_len),
-            others_mask.reshape(-1, seq_len)
+            others_ids.reshape(-1, seq_len), others_mask.reshape(-1, seq_len)
         ).reshape(batch_size, others_count, -1)
 
         emb_anchor = F.normalize(emb_anchor, dim=-1)
         emb_others = F.normalize(emb_others, dim=-1)
 
-        similarities = torch.einsum('bd,bnd->bn', emb_anchor, emb_others)  # [B, K]
+        similarities = torch.einsum("bd,bnd->bn", emb_anchor, emb_others)
         predicted_distances = 1 - similarities
 
         for b in range(batch_size):
-            predicted = predicted_distances[b].cpu().numpy()
-            true_dists = true_distances[b]
-            pairs = list(zip(other_idxs[b], predicted))
-            relevant_items = [idx for idx, dist in zip(other_idxs[b], true_dists) if dist <= pos_threshold]
+            predicted = predicted_distances[b].cpu().numpy().tolist()
+            ids = [int(x) for x in other_idxs[b]]
+            trues = [float(x) for x in true_distances[b]]
+            relevant_items = [idx for idx, d in zip(ids, trues) if d <= pos_threshold]
+            pairs = list(zip(ids, predicted))
 
             pairs.sort(key=lambda x: x[1])
             ranked_indices = [idx for idx, _ in pairs]
@@ -106,8 +106,7 @@ def evaluate_ranking_ability(
             f1 = f_scores(recall, precision, k_values)
 
             pearson_corr, _, spearman_corr, _ = compute_correlation_scores(
-                predicted.tolist(),
-                true_dists.tolist()
+                predicted, trues
             )
 
             precisions.append(precision)
@@ -139,6 +138,7 @@ def evaluate_ranking_ability(
         "imm_extra_eval": extra_imm_validation_ds.get_accuracy_score(model, device),
     }
 
+
 @torch.no_grad()
 def evaluate_validation_loss(
     model,
@@ -156,17 +156,16 @@ def evaluate_validation_loss(
         anchor_mask = batch["attention_mask_anchor"].to(device)
         pos_ids = batch["input_ids_positive"].to(device)
         pos_mask = batch["attention_mask_positive"].to(device)
-        neg_ids = batch["input_ids_negatives"].to(device)  # [B, K, L]
+        neg_ids = batch["input_ids_negatives"].to(device)
         neg_mask = batch["attention_mask_negatives"].to(device)
 
-        emb_anchor = model(anchor_ids, anchor_mask)  # [B, D]
-        emb_positive = model(pos_ids, pos_mask)      # [B, D]
+        emb_anchor = model(anchor_ids, anchor_mask)
+        emb_positive = model(pos_ids, pos_mask)
 
         batch_size, k_neg, seq_len = neg_ids.shape
         emb_negatives = model(
-            neg_ids.reshape(-1, seq_len),
-            neg_mask.reshape(-1, seq_len)
-        ).reshape(batch_size, k_neg, -1)  # [B, K, D]
+            neg_ids.reshape(-1, seq_len), neg_mask.reshape(-1, seq_len)
+        ).reshape(batch_size, k_neg, -1)
 
         emb_anchor = F.normalize(emb_anchor, dim=-1)
         emb_positive = F.normalize(emb_positive, dim=-1)
@@ -197,9 +196,8 @@ def train_loop(
     extra_imm_validation_ds,
     tokenizer,
 ):
-    model = BERTStatementEmbedder(
-        model_name=cfg.model_name,
-        embedding_dim=cfg.embedding_dim
+    model = RocqStatementEmbedder(
+        model_name=cfg.base_model_name, embedding_dim=cfg.embedding_dim
     ).to(device)
 
     loss_fn = InfoNCELoss(temperature=0.07).to(device)
@@ -216,7 +214,9 @@ def train_loop(
 
     train_loader = DynamicQueryDataLoader(train_dataset, batch_size=cfg.batch_size)
     val_loader = DynamicQueryDataLoader(val_dataset, batch_size=cfg.batch_size)
-    val_ranking_loader = RankingDataLoader(val_dataset_ranking, batch_size=cfg.batch_size)
+    val_ranking_loader = RankingDataLoader(
+        val_dataset_ranking, batch_size=cfg.batch_size
+    )
 
     step = 0
     train_losses = []
@@ -230,37 +230,53 @@ def train_loop(
             scheduler.step()
             step += 1
 
-            if step % cfg.evaluate_freq == 0 or step == cfg.steps:
-                avg_train_loss = sum(train_losses[-cfg.evaluate_freq:]) / len(train_losses[-cfg.evaluate_freq:])
+            if step % cfg.evaluation.evaluate_freq == 0 or step == cfg.steps:
+                avg_train_loss = sum(
+                    train_losses[-cfg.evaluation.evaluate_freq :]
+                ) / len(train_losses[-cfg.evaluation.evaluate_freq :])
                 val_loss_metrics = evaluate_validation_loss(
-                    model, val_loader, device,
-                    loss_fn, eval_steps=cfg.eval_steps,
+                    model,
+                    val_loader,
+                    device,
+                    loss_fn,
+                    eval_steps=cfg.evaluation.eval_steps,
                 )
                 val_ranking_metrics = evaluate_ranking_ability(
-                    model, val_ranking_loader, device,
-                    cfg.threshold_pos, cfg.evaluation.k_values,
+                    model,
+                    val_ranking_loader,
+                    device,
+                    cfg.threshold_pos,
+                    cfg.evaluation.k_values,
                     extra_imm_validation_ds,
-                    eval_steps=cfg.eval_steps,
+                    eval_steps=cfg.evaluation.eval_steps,
                 )
 
-                wandb.log({
-                    "train_loss": avg_train_loss,
-                    "val_loss": val_loss_metrics["val_loss"],
-                    "val_pearson": val_ranking_metrics["pearson"],
-                    "val_spearman": val_ranking_metrics["spearman"],
-                    "val_imm_extra_eval": val_ranking_metrics["imm_extra_eval"],
-                })
+                wandb.log(
+                    {
+                        "train_loss": avg_train_loss,
+                        "val_loss": val_loss_metrics["val_loss"],
+                        "val_pearson": val_ranking_metrics["pearson"],
+                        "val_spearman": val_ranking_metrics["spearman"],
+                        "val_imm_extra_eval": val_ranking_metrics["imm_extra_eval"],
+                    }
+                )
 
                 for k in cfg.evaluation.k_values:
-                    wandb.log({
-                        f"val_precision_at_{k}": val_ranking_metrics["precision"][k],
-                        f"val_recall_at_{k}": val_ranking_metrics["recall"][k],
-                        f"val_f1_at_{k}": val_ranking_metrics["f1"][k],
-                    })
+                    wandb.log(
+                        {
+                            f"val_precision_at_{k}": val_ranking_metrics["precision"][
+                                k
+                            ],
+                            f"val_recall_at_{k}": val_ranking_metrics["recall"][k],
+                            f"val_f1_at_{k}": val_ranking_metrics["f1"][k],
+                        }
+                    )
 
-            if step % cfg.save_freq == 0 or step == cfg.steps:
+            if step % cfg.evaluation.save_freq == 0 or step == cfg.steps:
                 date = datetime.now().strftime("%Y-%m-%d_%H-%M")
-                ckpt_dir = os.path.join(cfg.output_dir, f"checkpoint-{step}-{date}")
+                ckpt_dir = os.path.join(
+                    cfg.evaluation.output_dir, f"checkpoint-{step}-{date}"
+                )
                 os.makedirs(ckpt_dir, exist_ok=True)
 
                 model.bert.save_pretrained(ckpt_dir)

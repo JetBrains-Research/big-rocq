@@ -1,6 +1,7 @@
 from torch.utils.data import DataLoader
 import torch
 
+
 def dynamic_collate_fn(batch):
     input_ids_anchor = torch.stack([item["input_ids_anchor"] for item in batch])
     attn_mask_anchor = torch.stack([item["attention_mask_anchor"] for item in batch])
@@ -29,7 +30,7 @@ def dynamic_collate_fn(batch):
         "positive_idxs": positive_idxs,
         "negative_idxs": negative_idxs,
         "positive_distances": positive_distances,
-        "negative_distances": negative_distances
+        "negative_distances": negative_distances,
     }
 
 
@@ -61,7 +62,7 @@ class DynamicQueryDataLoader(DataLoader):
             shuffle=False,
             num_workers=num_workers,
             collate_fn=dynamic_collate_fn,
-            drop_last=False
+            drop_last=False,
         )
 
 
@@ -73,5 +74,5 @@ class RankingDataLoader(DataLoader):
             shuffle=False,
             num_workers=num_workers,
             collate_fn=ranking_collate_fn,
-            drop_last=False
+            drop_last=False,
         )

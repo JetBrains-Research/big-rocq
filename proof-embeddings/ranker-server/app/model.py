@@ -5,6 +5,7 @@ from transformers import RobertaTokenizer, RobertaModel
 
 logger = logging.getLogger(__name__)
 
+
 class SentenceEmbedder:
     def __init__(self, model_name: str, max_seq_length: int = 128):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -21,7 +22,7 @@ class SentenceEmbedder:
             padding="max_length",
             truncation=True,
             max_length=self.max_seq_length,
-            return_tensors="pt"
+            return_tensors="pt",
         ).to(self.device)
         out = self.model(**inputs)
         return out.last_hidden_state[:, 0, :]
