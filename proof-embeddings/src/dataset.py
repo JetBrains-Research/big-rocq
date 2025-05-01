@@ -323,14 +323,12 @@ class ValidationDataset(Dataset):
         return int(1e9)
 
     def __getitem__(self, index: int):
-        anchor_idx: int = index % (self.biggest_index + 1)
-        anchor_item = self.items_dict[anchor_idx]
         while True:
-            if anchor_item.has_enough_distances(neg_min=self.query_size_in_eval - 1):
-                break
-
             anchor_idx = random.choice(list(self.items_dict.keys()))
             anchor_item = self.items_dict[anchor_idx]
+
+            if anchor_item.has_enough_distances(neg_min=self.query_size_in_eval - 1):
+                break
 
         # Choose the fraction of positive samples between 0.2 and 0.5
         pos_fraction = random.uniform(0.1, 0.5)
