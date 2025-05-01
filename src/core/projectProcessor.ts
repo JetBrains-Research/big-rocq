@@ -90,7 +90,8 @@ export class ProjectProcessor {
         return path.extname(filePath) === ".v";
     }
 
-    private timeout = (ms: number) => new Promise((_, reject) => setTimeout(reject, ms));
+    private timeout = (ms: number) =>
+        new Promise((_, reject) => setTimeout(reject, ms));
 
     private async processDir(
         rootPath: string,
@@ -130,13 +131,20 @@ export class ProjectProcessor {
                         dirItem.stats
                     );
                 } else if (item.isFile() && item.name.endsWith(".v")) {
-                    const timeoutPromise = this.timeout(timeoutMillis).then(() => {
-                        throw new Error(`Timeout exceeded while processing file ${item.name}, probably Coq LSP is down`);
-                    });
+                    const timeoutPromise = this.timeout(timeoutMillis).then(
+                        () => {
+                            throw new Error(
+                                `Timeout exceeded while processing file ${item.name}, probably Coq LSP is down`
+                            );
+                        }
+                    );
 
                     try {
                         const datasetItem = await Promise.race([
-                            this.processFile(rootPath, `${accumulatedPath}/${item.name}`),
+                            this.processFile(
+                                rootPath,
+                                `${accumulatedPath}/${item.name}`
+                            ),
                             timeoutPromise,
                         ]);
 

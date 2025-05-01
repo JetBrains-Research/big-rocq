@@ -149,10 +149,7 @@ export async function buildCoqProofTree(
 
     try {
         throwIfCannotProcess(theorem);
-        throwIfMultipleGoalsOnStart(
-            initialGoals,
-            theorem.name
-        );
+        throwIfMultipleGoalsOnStart(initialGoals, theorem.name);
     } catch (e) {
         if (e instanceof CoqProofTreeError) {
             return Err(e);

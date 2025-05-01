@@ -44,6 +44,8 @@ function augmentedSamplesAsJson(
                 if (result.ok) {
                     augmentedFileSamples.fileSamples.push({
                         statement: result.val.statement,
+                        conclusion: result.val.conclusion,
+                        hypotheses: result.val.hypotheses,
                         proofString: result.val.proof,
                     });
                 }

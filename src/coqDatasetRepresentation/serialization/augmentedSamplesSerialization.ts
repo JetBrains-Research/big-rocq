@@ -1,5 +1,7 @@
 export interface CompactSerializedAugmentedSample {
     statement: string;
+    conclusion: string;
+    hypotheses: string;
     proofString: string;
 }
 

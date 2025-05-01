@@ -36,11 +36,18 @@ function goalToStatement(
     skippedHyps: HypothesesDict
 ): string {
     const auxTheoremConcl = proofGoal?.ty;
-    const theoremIndeces = removeSkippedHypotheses(proofGoal.hyps, skippedHyps)
-        .map((hyp) => `(${hypToString(hyp)})`)
-        .join(" ");
+    const theoremIndeces = hypothesesToIndeces(proofGoal, skippedHyps);
     const indicesStr = theoremIndeces.length > 0 ? `${theoremIndeces} : ` : "";
     return `${indicesStr}${auxTheoremConcl}.`;
+}
+
+function hypothesesToIndeces(
+    proofGoal: Goal<PpString>,
+    skippedHyps: HypothesesDict
+): string {
+    return removeSkippedHypotheses(proofGoal.hyps, skippedHyps)
+        .map((hyp) => `(${hypToString(hyp)})`)
+        .join(" ");
 }
 
 function removeSkippedHypotheses(
@@ -75,10 +82,14 @@ export function constructTheoremWithProof(
     );
     const statement = goalToStatement(proofState, skippedHyps);
     const proof = proofSteps.map((step) => step.text).join("\n");
+    const hypotheses = hypothesesToIndeces(proofState, skippedHyps);
+    const conclusion = `${proofState?.ty}`;
     return {
         namedTheoremStatement,
         proof,
         statement,
+        hypotheses,
+        conclusion,
         proofLength: proofSteps.length,
     };
 }

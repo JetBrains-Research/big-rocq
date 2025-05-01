@@ -85,7 +85,6 @@ async function parseFlecheDocument(
         const span = doc.spans[i];
         try {
             const vernacType = getVernacexpr(getExpr(span));
-            console.log("vernacType", vernacType);
             if (
                 vernacType &&
                 [
@@ -345,7 +344,6 @@ function parseProof(
         const span = ast[index];
 
         const vernacType = getVernacexpr(getExpr(span));
-        console.log("vernacType Proof", vernacType);
         if (!vernacType) {
             throw new CoqParsingError(
                 "unable to derive the vernac type of the sentence"

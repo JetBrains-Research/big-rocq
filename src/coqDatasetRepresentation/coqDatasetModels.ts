@@ -7,6 +7,8 @@ import { CoqProofTree } from "../coqProofTree/coqProofTree";
 export interface TheoremDatasetSample {
     namedTheoremStatement: string;
     statement: string;
+    conclusion: string;
+    hypotheses: string;
     proof: string;
     proofLength: number;
 }
