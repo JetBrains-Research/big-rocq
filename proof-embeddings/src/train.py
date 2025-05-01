@@ -3,7 +3,9 @@ import wandb
 from tqdm import tqdm
 import torch.nn.functional as F
 import logging
+import os
 from transformers import get_linear_schedule_with_warmup
+from datetime import datetime
 
 from .dataloader import DynamicQueryDataLoader, RankingDataLoader
 from .losses import InfoNCELoss
@@ -192,7 +194,8 @@ def train_loop(
     cfg,
     device,
     val_dataset_ranking,
-    extra_imm_validation_ds
+    extra_imm_validation_ds,
+    tokenizer,
 ):
     model = BERTStatementEmbedder(
         model_name=cfg.model_name,
@@ -255,6 +258,22 @@ def train_loop(
                         f"val_f1_at_{k}": val_ranking_metrics["f1"][k],
                     })
 
+            if step % cfg.save_freq == 0 or step == cfg.steps:
+                date = datetime.now().strftime("%Y-%m-%d_%H-%M")
+                ckpt_dir = os.path.join(cfg.output_dir, f"checkpoint-{step}-{date}")
+                os.makedirs(ckpt_dir, exist_ok=True)
+
+                model.bert.save_pretrained(ckpt_dir)
+
+                tokenizer.save_pretrained(ckpt_dir)
+                with open(os.path.join(ckpt_dir, "training_args.txt"), "w") as f:
+                    f.write(f"step = {step}\n")
+                    for k, v in vars(cfg).items():
+                        f.write(f"{k} = {v}\n")
+                logger.info(f"Saved checkpoint to {ckpt_dir}")
+
+            if step >= cfg.steps:
+                break
 
             if step >= cfg.steps:
                 break

@@ -1,0 +1,4 @@
+host: "0.0.0.0"
+port: 8080
+max_seq_length: 128
+model_name: "kdizzled/rocqstar-ranker-theorem-embeddings"

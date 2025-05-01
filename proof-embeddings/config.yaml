@@ -1,5 +1,5 @@
 project_name: "coq-theorem-embedding"
-experiment_name: "infonce-file-batch-by-file"
+experiment_name: "infonce-file-final-1"
 log_level: "INFO"
 
 dataset_path: "./data/"
@@ -11,10 +11,8 @@ val_split: 0.2
 test_split: 0.0
 
 model_name: "microsoft/codebert-base"
-#model_name: "prajjwal1/bert-tiny"
 max_seq_length: 128
 embedding_dim: 768
-# If true, only train top layers
 
 margin: 0.25
 # proof distance <= threshold -> positive
@@ -24,6 +22,7 @@ threshold_neg: 0.65
 threshold_hard_neg: 0.45
 k_negatives: 4
 
+output_dir: "./checkpoints/"
 steps: 100000
 eval_steps: 200
 evaluate_freq: 100

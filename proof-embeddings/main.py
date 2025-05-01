@@ -80,7 +80,7 @@ def main(cfg_path: str = "config.yaml"):
     logger.info(f"Created train, validation with sizes: {len(train_dataset)}, {len(val_dataset)}")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = train_loop(train_dataset, val_dataset, cfg, device, val_dataset_ranking, extra_imm_validation)
+    model = train_loop(train_dataset, val_dataset, cfg, device, val_dataset_ranking, extra_imm_validation, tokenizer)
     
     model.to(device)
 
