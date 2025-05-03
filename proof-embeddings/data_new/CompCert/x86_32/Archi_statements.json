@@ -1,0 +1,1 @@
+{"filePath":"/Users/andrei/MCS_Projects/coqPilotOther/CompCert/x86_32/Archi.v","fileSamples":[{"statement":"negb ptr64 = true -> ptr64 = false.","conclusion":"negb ptr64 = true -> ptr64 = false","hypotheses":"","proofString":"destruct ptr64; simpl; congruence."}]}

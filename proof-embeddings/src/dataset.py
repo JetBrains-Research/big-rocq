@@ -98,7 +98,7 @@ class TrainingDataset(Dataset):
         self.ds_statements = []
         for file in data:
             for theorem in file:
-                self.ds_statements.append(theorem["statement"])
+                self.ds_statements.append(theorem["conclusion"])
 
         self.vectorizer: TfidfVectorizer = TfidfVectorizer(
             ngram_range=(1, 2),
@@ -115,7 +115,7 @@ class TrainingDataset(Dataset):
             file_items = []
             for theorem in file:
                 item = DatasetItem(
-                    theorem["statement"],
+                    theorem["conclusion"],
                     theorem["proofString"],
                     item_index,
                     tokenizer,
@@ -243,7 +243,7 @@ class ValidationDataset(Dataset):
         self.ds_statements = []
         for file in data:
             for theorem in file:
-                self.ds_statements.append(theorem["statement"])
+                self.ds_statements.append(theorem["conclusion"])
 
         self.vectorizer = TfidfVectorizer(
             ngram_range=(1, 2),
@@ -258,7 +258,7 @@ class ValidationDataset(Dataset):
             file_items = []
             for theorem in file:
                 item = DatasetItem(
-                    theorem["statement"],
+                    theorem["conclusion"],
                     theorem["proofString"],
                     item_index,
                     tokenizer,
@@ -376,7 +376,7 @@ class RankingDataset:
     ):
         data = load_single_file_json_dataset(all_statements_path)
         logger.info("Loaded dataset with %d statements", len(data))
-        self.statements: List[str] = [d["statement"] for d in data]
+        self.statements: List[str] = [d["conclusion"] for d in data]
         self.proofs: List[str] = [d["proofString"] for d in data]
 
         def encode_statement(st: str):

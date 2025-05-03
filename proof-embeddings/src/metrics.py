@@ -36,10 +36,6 @@ def f_scores(
 def recall_at_k(
     predicted_ranked_items: List[int], relevant_items: List[int], k_values: List[int]
 ) -> dict:
-    logger.info(
-        f"Relevant items: {relevant_items}, Predicted items: {predicted_ranked_items}"
-    )
-
     results = {}
 
     if len(relevant_items) == 0:
