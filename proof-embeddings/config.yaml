@@ -1,10 +1,10 @@
 project_name: "coq-theorem-embedding"
-experiment_name: "infonce-only-conclusions"
+experiment_name: "infonce-no-hard-negatives"
 log_level: "INFO"
 
 dataset:
-  dataset_path: "./data_new/"
-  rankin_ds_path_statements: "./data_new/imm/basic/Events_statements.json"
+  dataset_path: "./data/"
+  rankin_ds_path_statements: "./data/imm/basic/Events_statements.json"
   rankin_ds_path_references: "./validationSet/reference_premises.json"
   samples_from_single_anchor: 150
   train_split: 0.8
@@ -22,7 +22,7 @@ threshold_neg: 0.65
 # With some probability (30%), we sample a hard negative
 # and treat it as a negative. It is done to smoothen the
 # decision boundary and make the model more robust
-threshold_hard_neg: 0.45
+threshold_hard_neg: 0.65
 # In InfoNCE loss, one query is 1 positive and k negatives
 # We maximize the similarity of the query with the
 # positive and minimize it with the negatives

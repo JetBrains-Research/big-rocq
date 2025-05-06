@@ -2,97 +2,97 @@
   "references": [
     {
       "clique": [
-        "exists v0 : value, Some v = Some v0",
-        "exists l0 : location, Some l = Some l0",
-        "exists v0 : value, Some v = Some v0",
-        "exists l0 : location, Some l = Some l0"
+        "(x : A) (s : x_mode) (o : mode) (l : location) (v : value) (Heq : lab x = Astore s o l v) (WX : true) : exists v0 : value, Some v = Some v0.",
+        "(x : A) (s : x_mode) (o : mode) (l : location) (v : value) (Heq : lab x = Astore s o l v) (WX : true) : exists l0 : location, Some l = Some l0.",
+        "(x : A) (ex : bool) (o : mode) (l : location) (v : value) (Heq : lab x = Aload ex o l v) (WX : true) : exists v0 : value, Some v = Some v0.",
+        "(x : A) (ex : bool) (o : mode) (l : location) (v : value) (Heq : lab x = Aload ex o l v) (WX : true) : exists l0 : location, Some l = Some l0."
       ]
     },
     {
       "clique": [
-        "eq_dom (fun _ : A => True) (loc lab1) (loc lab2)",
-        "eq_dom (fun _ : A => True) (mod lab1) (mod lab2)",
-        "eq_dom (fun _ : A => True) (xmod lab1) (xmod lab2)"
+        "(SAME : same_lab_u2v) : eq_dom (fun _ : A => True) (loc lab1) (loc lab2).",
+        "(SAME : same_lab_u2v) : eq_dom (fun _ : A => True) (mod lab1) (mod lab2).",
+        "(SAME : same_lab_u2v) : eq_dom (fun _ : A => True) (xmod lab1) (xmod lab2)."
       ]
     },
     {
       "clique": [
-        "(fun _ : A => True) ∩₁ (fun a : A => is_r lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_r lab2 a) ->\n(fun a : A => is_r lab1 a) ≡₁ (fun a : A => is_r lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_w lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_w lab2 a) ->\n(fun a : A => is_w lab1 a) ≡₁ (fun a : A => is_w lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_only_pln lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_only_pln lab2 a) ->\n(fun a : A => is_only_pln lab1 a) ≡₁ (fun a : A => is_only_pln lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_only_rlx lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_only_rlx lab2 a) ->\n(fun a : A => is_only_rlx lab1 a) ≡₁ (fun a : A => is_only_rlx lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_rlx lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_rlx lab2 a) ->\n(fun a : A => is_rlx lab1 a) ≡₁ (fun a : A => is_rlx lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_acq lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_acq lab2 a) ->\n(fun a : A => is_acq lab1 a) ≡₁ (fun a : A => is_acq lab2 a)"
+      "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_r lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_r lab2 a) ->\n(fun a : A => is_r lab1 a) ≡₁ (fun a : A => is_r lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_w lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_w lab2 a) ->\n(fun a : A => is_w lab1 a) ≡₁ (fun a : A => is_w lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_only_pln lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_only_pln lab2 a) ->\n(fun a : A => is_only_pln lab1 a) ≡₁ (fun a : A => is_only_pln lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_only_rlx lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_only_rlx lab2 a) ->\n(fun a : A => is_only_rlx lab1 a) ≡₁ (fun a : A => is_only_rlx lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_rlx lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_rlx lab2 a) ->\n(fun a : A => is_rlx lab1 a) ≡₁ (fun a : A => is_rlx lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_acq lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_acq lab2 a) ->\n(fun a : A => is_acq lab1 a) ≡₁ (fun a : A => is_acq lab2 a)."
       ]
     },
     {
       "clique": [
-        "(fun _ : A => True) ∩₁ (fun a : A => is_ra lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_ra lab2 a) ->\n(fun a : A => is_ra lab1 a) ≡₁ (fun a : A => is_ra lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_w lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_w lab2 a) ->\n(fun a : A => is_w lab1 a) ≡₁ (fun a : A => is_w lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_f lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_f lab2 a) ->\n(fun a : A => is_f lab1 a) ≡₁ (fun a : A => is_f lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => R_ex lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => R_ex lab2 a) ->\n(fun a : A => R_ex lab1 a) ≡₁ (fun a : A => R_ex lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_sc lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_sc lab2 a) ->\n(fun a : A => is_sc lab1 a) ≡₁ (fun a : A => is_sc lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_xacq lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_xacq lab2 a) ->\n(fun a : A => is_xacq lab1 a) ≡₁ (fun a : A => is_xacq lab2 a)"
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_ra lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_ra lab2 a) ->\n(fun a : A => is_ra lab1 a) ≡₁ (fun a : A => is_ra lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_w lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_w lab2 a) ->\n(fun a : A => is_w lab1 a) ≡₁ (fun a : A => is_w lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_f lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_f lab2 a) ->\n(fun a : A => is_f lab1 a) ≡₁ (fun a : A => is_f lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => R_ex lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => R_ex lab2 a) ->\n(fun a : A => R_ex lab1 a) ≡₁ (fun a : A => R_ex lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_sc lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_sc lab2 a) ->\n(fun a : A => is_sc lab1 a) ≡₁ (fun a : A => is_sc lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_xacq lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_xacq lab2 a) ->\n(fun a : A => is_xacq lab1 a) ≡₁ (fun a : A => is_xacq lab2 a)."
       ]
     },
     {
       "clique": [
-        "(fun _ : A => True) ∩₁ (fun a : A => is_acqrel lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_acqrel lab2 a) ->\n(fun a : A => is_acqrel lab1 a) ≡₁ (fun a : A => is_acqrel lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_w lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_w lab2 a) ->\n(fun a : A => is_w lab1 a) ≡₁ (fun a : A => is_w lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_only_rlx lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_only_rlx lab2 a) ->\n(fun a : A => is_only_rlx lab1 a) ≡₁ (fun a : A => is_only_rlx lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_rlx lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_rlx lab2 a) ->\n(fun a : A => is_rlx lab1 a) ≡₁ (fun a : A => is_rlx lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_acq lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_acq lab2 a) ->\n(fun a : A => is_acq lab1 a) ≡₁ (fun a : A => is_acq lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_rel lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_rel lab2 a) ->\n(fun a : A => is_rel lab1 a) ≡₁ (fun a : A => is_rel lab2 a)"
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_acqrel lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_acqrel lab2 a) ->\n(fun a : A => is_acqrel lab1 a) ≡₁ (fun a : A => is_acqrel lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_w lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_w lab2 a) ->\n(fun a : A => is_w lab1 a) ≡₁ (fun a : A => is_w lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_only_rlx lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_only_rlx lab2 a) ->\n(fun a : A => is_only_rlx lab1 a) ≡₁ (fun a : A => is_only_rlx lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_rlx lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_rlx lab2 a) ->\n(fun a : A => is_rlx lab1 a) ≡₁ (fun a : A => is_rlx lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_acq lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_acq lab2 a) ->\n(fun a : A => is_acq lab1 a) ≡₁ (fun a : A => is_acq lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_rel lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_rel lab2 a) ->\n(fun a : A => is_rel lab1 a) ≡₁ (fun a : A => is_rel lab2 a)."
       ]
     },
     {
       "clique": [
-        "(fun _ : A => True) ∩₁ (fun a : A => is_xacq lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_xacq lab2 a) ->\n(fun a : A => is_xacq lab1 a) ≡₁ (fun a : A => is_xacq lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_rel lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_rel lab2 a) ->\n(fun a : A => is_rel lab1 a) ≡₁ (fun a : A => is_rel lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_acqrel lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_acqrel lab2 a) ->\n(fun a : A => is_acqrel lab1 a) ≡₁ (fun a : A => is_acqrel lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_sc lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_sc lab2 a) ->\n(fun a : A => is_sc lab1 a) ≡₁ (fun a : A => is_sc lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_ra lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_ra lab2 a) ->\n(fun a : A => is_ra lab1 a) ≡₁ (fun a : A => is_ra lab2 a)",
-        "(fun _ : A => True) ∩₁ (fun a : A => is_xacq lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_xacq lab2 a) ->\n(fun a : A => is_xacq lab1 a) ≡₁ (fun a : A => is_xacq lab2 a)"
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_xacq lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_xacq lab2 a) ->\n(fun a : A => is_xacq lab1 a) ≡₁ (fun a : A => is_xacq lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_rel lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_rel lab2 a) ->\n(fun a : A => is_rel lab1 a) ≡₁ (fun a : A => is_rel lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_acqrel lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_acqrel lab2 a) ->\n(fun a : A => is_acqrel lab1 a) ≡₁ (fun a : A => is_acqrel lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_sc lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_sc lab2 a) ->\n(fun a : A => is_sc lab1 a) ≡₁ (fun a : A => is_sc lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_ra lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_ra lab2 a) ->\n(fun a : A => is_ra lab1 a) ≡₁ (fun a : A => is_ra lab2 a).",
+        "(SAME : same_lab_u2v) : (fun _ : A => True) ∩₁ (fun a : A => is_xacq lab1 a)\n≡₁ (fun _ : A => True) ∩₁ (fun a : A => is_xacq lab2 a) ->\n(fun a : A => is_xacq lab1 a) ≡₁ (fun a : A => is_xacq lab2 a)."
       ]
     },
     {
       "clique": [
-        "forall e : A, s' e -> same_label_u2v (lab e) (lab' e)",
-        "same_label_u2v (lab e) (lab' e)"
+        "(A : Type) (s s' : A -> Prop) (lab lab' : A -> label) (SS : s' ⊆₁ s) (S1 : same_lab_u2v_dom s lab lab') : forall e : A, s' e -> same_label_u2v (lab e) (lab' e).",
+        "(A : Type) (s s' : A -> Prop) (lab lab' : A -> label) (SS : s' ⊆₁ s) (S1 : same_lab_u2v_dom s lab lab') (e : A) (EE : s' e) : same_label_u2v (lab e) (lab' e)."
       ]
     },
     {
       "clique": [
-        "match lbl1 with\n| Aload r1 o1 l1 _ =>\n    match lbl3 with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lbl3 with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lbl3 with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend",
-        "match lbl2 with\n| Aload r1 o1 l1 _ =>\n    match lbl1 with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lbl1 with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lbl1 with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend",
-        "match lab2 e with\n| Aload r1 o1 l1 _ =>\n    match lab1 e with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lab1 e with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lab1 e with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend"
+        "(lbl1 lbl2 lbl3 : label) (S1 : match lbl1 with\n| Aload r1 o1 l1 _ =>\n    match lbl2 with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lbl2 with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lbl2 with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend) (S2 : match lbl2 with\n| Aload r1 o1 l1 _ =>\n    match lbl3 with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lbl3 with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lbl3 with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend) : match lbl1 with\n| Aload r1 o1 l1 _ =>\n    match lbl3 with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lbl3 with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lbl3 with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend.",
+        "(lbl1 lbl2 : label) (S1 : match lbl1 with\n| Aload r1 o1 l1 _ =>\n    match lbl2 with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lbl2 with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lbl2 with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend) : match lbl2 with\n| Aload r1 o1 l1 _ =>\n    match lbl1 with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lbl1 with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lbl1 with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend.",
+        "(A : Type) (lab1 lab2 : A -> label) (e : A) (S1 : match lab1 e with\n| Aload r1 o1 l1 _ =>\n    match lab2 e with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lab2 e with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lab2 e with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend) (EE : True) : match lab2 e with\n| Aload r1 o1 l1 _ =>\n    match lab1 e with\n    | Aload r2 o2 l2 _ => r1 = r2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Astore s1 o1 l1 _ =>\n    match lab1 e with\n    | Astore s2 o2 l2 _ => s1 = s2 /\\ o1 = o2 /\\ l1 = l2\n    | _ => False\n    end\n| Afence o1 => match lab1 e with\n               | Afence o2 => o1 = o2\n               | _ => False\n               end\nend."
       ]
     },
     {
       "clique": [
-        "same_label_u2v (lab1 e) (lab3 e)",
-        "same_label_u2v (lab1 e) (lab3 e)",
-        "same_label_u2v (lab2 e) (lab1 e)"
+        "(A : Type) (s : A -> Prop) (lab1 lab2 lab3 : A -> label) (S1 : same_lab_u2v_dom s lab1 lab2) (S2 : same_lab_u2v_dom s lab2 lab3) (e : A) (EE : s e) : same_label_u2v (lab1 e) (lab3 e).",
+        "(A : Type) (s : A -> Prop) (lab1 lab2 lab3 : A -> label) (e : A) (S1 : same_label_u2v (lab1 e) (lab2 e)) (S2 : same_lab_u2v_dom s lab2 lab3) (EE : s e) : same_label_u2v (lab1 e) (lab3 e).",
+        "(A : Type) (s : A -> Prop) (lab1 lab2 : A -> label) (S2 : same_lab_u2v_dom s lab1 lab2) (e : A) (EE : s e) : same_label_u2v (lab2 e) (lab1 e)."
       ]
     },
     {
       "clique": [
-        "match x with\n| InitEvent _ =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend",
-        "match y with\n| InitEvent _ =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend \\/\nmatch z with\n| InitEvent _ =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend"
+        "(x y z : actid) (H : match x with\n| InitEvent _ =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend) (H0 : match y with\n| InitEvent _ =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend) : match x with\n| InitEvent _ =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend.",
+        "(x y z : actid) (N : ~ is_init x) (NEQ : index y <> index z) (XY : match x with\n| InitEvent _ =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend) (XZ : match x with\n| InitEvent _ =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend) : match y with\n| InitEvent _ =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match z with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend \\/\nmatch z with\n| InitEvent _ =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent _ _ => True\n    end\n| ThreadEvent t i =>\n    match y with\n    | InitEvent _ => False\n    | ThreadEvent t' i' => t = t' /\\ i < i'\n    end\nend."
       ]
     },
     {
       "clique": [
-        "False",
-        "index1 < index2 \\/ index2 < index1",
-        "index1 < index2 \\/ index2 < index1",
-        "index0 < index1 \\/ index1 < index0 \\/ index0 = index1"
+        "(thread : thread_id) (index0 : nat) (H : thread = thread) (H0 : index0 < index0) : False.",
+        "(index0 index1 : nat) (thread1 : thread_id) (index2 : nat) (N : ~ false) (NEQ : index1 <> index2) (XY0 : index0 < index1) (XZ0 : index0 < index2) : index1 < index2 \\/ index2 < index1.",
+        "(thread : thread_id) (index0 index1 index2 : nat) (NEQ : index1 <> index2) (XY0 : index1 < index0) (XZ0 : index2 < index0) : index1 < index2 \\/ index2 < index1.",
+        "(index0 : nat) (thread0 : thread_id) (index1 : nat) : index0 < index1 \\/ index1 < index0 \\/ index0 = index1."
       ]
     },
     {
       "clique": [
-        "(fun a : actid => is_init a) × set_compl (fun a : actid => is_init a)\n⊆ (fun a b : actid =>\n   match a with\n   | InitEvent _ =>\n       match b with\n       | InitEvent _ => False\n       | ThreadEvent _ _ => True\n       end\n   | ThreadEvent t i =>\n       match b with\n       | InitEvent _ => False\n       | ThreadEvent t' i' => t = t' /\\ i < i'\n       end\n   end)",
-        "(ext_sb^? ∪ ext_sb⁻¹ ∪ (fun a b : actid => is_init a /\\ is_init b))\n⨾ ⦗set_compl (fun a : actid => is_init a)⦘ ⊆ ext_sb^? ∪ ext_sb⁻¹"
+        "(fun a : actid => is_init a) × set_compl (fun a : actid => is_init a)\n⊆ (fun a b : actid =>\n   match a with\n   | InitEvent _ =>\n       match b with\n       | InitEvent _ => False\n       | ThreadEvent _ _ => True\n       end\n   | ThreadEvent t i =>\n       match b with\n       | InitEvent _ => False\n       | ThreadEvent t' i' => t = t' /\\ i < i'\n       end\n   end).",
+        "(ext_sb^? ∪ ext_sb⁻¹ ∪ (fun a b : actid => is_init a /\\ is_init b))\n⨾ ⦗set_compl (fun a : actid => is_init a)⦘ ⊆ ext_sb^? ∪ ext_sb⁻¹."
       ]
     }
   ]
