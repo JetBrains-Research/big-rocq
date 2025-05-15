@@ -1,5 +1,5 @@
 project_name: "coq-theorem-embedding"
-experiment_name: "infonce-no-hard-negatives"
+experiment_name: "infonce-final-1"
 log_level: "INFO"
 
 dataset:
@@ -35,9 +35,9 @@ learning_rate: 4e-6
 random_seed: 52
 
 wandb:
-  enabled: true
+  enabled: false
   project: "coq-embeddings"
-  entity: "kozyrev-andreiii2016"
+  entity: "********"
   tags: ["dyn-lr", "InfoNCE", "hard-negatives", "codebert"]
 
 evaluation:

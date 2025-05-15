@@ -1,8 +1,9 @@
 # BigRocq ![Version](https://img.shields.io/badge/version-v0.0.1-blue?style=flat-square)
 
-*Authors:* Andrei Kozyrev, Gleb Solovev, Nikita Khramov, and Anton Podkopaev, [Programming Languages and Tools Lab](https://lp.jetbrains.com/research/plt_lab/) at JetBrains Research.
-
 `BigRocq` is a utility, that takes a Rocq (former Coq) project as input and uses domain knowladge to increase a number of theorems in the dataset by a significant factor. It produces new theorems from existing ones. Using [coq-lsp](https://github.com/ejgallego/coq-lsp) `BigRocq` type-checks theorems, transforms linearly structured proofs into a tree like structure and then produces new proofs using the fact that each subtree in such a tree could be represented as a separate sub-statement. All produced theorems are type-checked and are guaranteed to be well-formed.
+
+The local server for wrapping the model is located [here](proof-embeddings/ranker-server/). 
+The root of the code, which was used to train the model is located [here](proof-embeddings/).
 
 # Table of Contents
 
