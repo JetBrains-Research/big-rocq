@@ -1,4 +1,3 @@
-// From: https://github.com/JetBrains-Research/coqpilot/blob/main/src/benchmark/framework/structures/common/codeElementPositions.ts
 import { JSONSchemaType } from "ajv";
 
 export interface CodeElementRangeInterface {

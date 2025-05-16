@@ -33,10 +33,6 @@ If the [coq-lsp](https://github.com/ejgallego/coq-lsp) extension works well and 
 ## Usage prerequisites
 
 First, clone the `BigRocq` repository and navigate into its directory.
-```bash
-git clone https://github.com/JetBrains-Research/big-rocq.git
-cd big-rocq
-```
 
 To build the utility locally, you'll need Node.js installed. The recommended way to manage Node.js versions is by using `nvm`. From the `BigRocq` root directory, execute:
 ```bash
@@ -107,8 +103,6 @@ Options
   --verbose                                                                     
   -d, --debug                                                                   
   -h, --help                                                                    
-
-  Project home: https://github.com/JetBrains-Research/big-rocq 
 
 ========================================
 ```

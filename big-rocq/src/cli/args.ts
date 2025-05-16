@@ -94,7 +94,7 @@ export const args = parse<BigRocqCliArguments>(
         footerContentSections: [
             {
                 content:
-                    "Project home: {underline https://github.com/JetBrains-Research/big-rocq}",
+                    "Project is under development",
             },
             {
                 header: "========================================",

@@ -1,4 +1,3 @@
-// From: https://github.com/JetBrains-Research/coqpilot/blob/main/src/benchmark/framework/utils/coqUtils/goalParser.ts
 import { ProofGoal } from "../../../coqLsp/coqLspTypes";
 
 export type SerializedGoal = string; // TODO: maybe develop proper serialized typing

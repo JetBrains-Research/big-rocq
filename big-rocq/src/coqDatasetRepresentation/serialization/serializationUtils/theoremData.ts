@@ -1,5 +1,3 @@
-// From: https://github.com/JetBrains-Research/coqpilot/blob/main/src/benchmark/framework/structures/parsedCoqFile/theoremData.ts
-
 /* eslint-disable @typescript-eslint/naming-convention */
 import { JSONSchemaType } from "ajv";
 
