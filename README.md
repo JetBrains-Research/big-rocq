@@ -16,5 +16,8 @@ A monorepo containing all code we have developed for the RocqStar proof retrieve
 - **[CoqPilot+RocqStar](./CoqPilot+RocqStar/)**  
   Patch and integration for the CoqPilot VSCode plugin to include RocqStar ranking support.
 
+- **[embedder-training-dataset](./proof-embeddings/data/)**  
+  Dataset used for training the proof embedder. It contains a collection of theorem–proof pairs, that we mined from the Coq projects. The dataset collection process is described in the Section 2.1 of the paper.
+
 - **[experiments](./experiments/)**  
   Code to reproduce initial experiments from Section 2 of the paper. 
