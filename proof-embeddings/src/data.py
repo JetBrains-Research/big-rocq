@@ -59,7 +59,7 @@ def split_dataset(
     train_ratio: float,
     val_ratio: float,
     test_ratio: float,
-    remove: List[str] = None,
+    remove: List[str] | None = None,
 ) -> Tuple[
     List[List[Dict[str, Any]]], List[List[Dict[str, Any]]], List[List[Dict[str, Any]]]
 ]:
