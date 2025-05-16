@@ -1,0 +1,397 @@
+diff --git a/package.json b/package.json
+index 1fde145..ea81fad 100644
+--- a/package.json
++++ b/package.json
+@@ -468,12 +468,14 @@
+             "enum": [
+               "distance",
+               "random",
+-              "jaccardIndex"
++              "jaccardIndex",
++              "rocqStar"
+             ],
+             "markdownEnumDescriptions": [
+               "Theorems are selected based on the distance to the current cursor position.",
+               "Theorems are selected randomly.",
+-              "Theorems are selected based on the Jaccard index. This metric aims to pick the most similar theorems to the goal currenly being proved."
++              "Theorems are selected based on the Jaccard index. This metric aims to pick the most similar theorems to the goal currenly being proved.",
++              "Theorems are selected based on the pretrained RocqStar embeddings for statements."
+             ],
+             "description": "Context of the LLM is limited. Usually not all theorems from the file may be used in the completion request. This parameter defines the way theorems are selected for the completion.",
+             "default": "distance",
+diff --git a/src/benchmark/framework/benchmarkingCore/singleCompletionGeneration/benchmarkSingleCompletionGeneration.ts b/src/benchmark/framework/benchmarkingCore/singleCompletionGeneration/benchmarkSingleCompletionGeneration.ts
+index ddb8661..117e6d1 100644
+--- a/src/benchmark/framework/benchmarkingCore/singleCompletionGeneration/benchmarkSingleCompletionGeneration.ts
++++ b/src/benchmark/framework/benchmarkingCore/singleCompletionGeneration/benchmarkSingleCompletionGeneration.ts
+@@ -308,12 +308,13 @@ async function generateProofWithRetriesExclusively<
+             | undefined = undefined;
+         if (generationArgs.roundNumber === 1) {
+             generateProof = async (metadataHolder) => {
+-                const proofGenerationContext = buildProofGenerationContext(
+-                    generationArgs.completionContext,
+-                    generationArgs.sourceFileEnvironment.fileTheorems,
+-                    generationArgs.sourceTheorem.name,
+-                    benchmarkingParams.theoremRanker
+-                );
++                const proofGenerationContext = 
++                    await buildProofGenerationContext(
++                        generationArgs.completionContext,
++                        generationArgs.sourceFileEnvironment.fileTheorems,
++                        generationArgs.sourceTheorem.name,
++                        benchmarkingParams.theoremRanker
++                    );
+                 return generationArgs.llmService.generateProof(
+                     proofGenerationContext,
+                     benchmarkingParams.modelParams,
+@@ -479,20 +480,20 @@ async function generateProofWithRetriesMeasured(
+  * _Important:_ this function is the one responsbile for **removing
+  * the target theorem from the context** (i.e. file theorems) if it is present there.
+  */
+-function buildProofGenerationContext(
++async function buildProofGenerationContext(
+     completionContext: CompletionContext,
+     fileTheorems: Theorem[],
+     targetTheoremName: string,
+     theoremRanker?: ContextTheoremsRanker
+-): ProofGenerationContext {
++): Promise<ProofGenerationContext> {
+     const contextTheorems = fileTheorems.filter(
+         (theorem) => theorem.name !== targetTheoremName
+     );
+     const rankedTheorems =
+-        theoremRanker?.rankContextTheorems(
++        (await theoremRanker?.rankContextTheorems(
+             contextTheorems,
+             completionContext
+-        ) ?? fileTheorems;
++        )) ?? fileTheorems;
+     return {
+         contextTheorems: rankedTheorems,
+         completionTarget: goalToTargetLemma(completionContext.proofGoal),
+diff --git a/src/benchmark/framework/utils/inputResolutionUtils/resolveTheoremsRanker.ts b/src/benchmark/framework/utils/inputResolutionUtils/resolveTheoremsRanker.ts
+index 0fbdce4..6bae3cd 100644
+--- a/src/benchmark/framework/utils/inputResolutionUtils/resolveTheoremsRanker.ts
++++ b/src/benchmark/framework/utils/inputResolutionUtils/resolveTheoremsRanker.ts
+@@ -2,6 +2,7 @@ import { DistanceContextTheoremsRanker } from "../../../../core/contextTheoremRa
+ import { EuclidContextTheoremsRanker } from "../../../../core/contextTheoremRanker/actualRankers/euclidContextTheoremRanker";
+ import { JaccardIndexContextTheoremsRanker } from "../../../../core/contextTheoremRanker/actualRankers/jaccardIndexContextTheoremsRanker";
+ import { RandomContextTheoremsRanker } from "../../../../core/contextTheoremRanker/actualRankers/randomContextTheoremsRanker";
++import { RocqStarContextTheoremsRanker } from "../../../../core/contextTheoremRanker/actualRankers/rocqStarContextTheoremRanker";
+ import { WeightedJaccardIndexContextTheoremsRanker } from "../../../../core/contextTheoremRanker/actualRankers/weightedJaccardIndexTheoremRanker";
+ import { CosineContextTheoremsRanker } from "../../../../core/contextTheoremRanker/actualRankers/сosineContextTheoremRanker";
+ import {
+@@ -25,5 +26,7 @@ export function resolveTheoremsRanker(
+             return new WeightedJaccardIndexContextTheoremsRanker();
+         case "cosine":
+             return new CosineContextTheoremsRanker();
++        case "rocqStar":
++            return new RocqStarContextTheoremsRanker();
+     }
+ }
+diff --git a/src/core/completionGenerator.ts b/src/core/completionGenerator.ts
+index 5dab903..7d2bed3 100644
+--- a/src/core/completionGenerator.ts
++++ b/src/core/completionGenerator.ts
+@@ -53,7 +53,7 @@ export async function generateCompletion(
+     eventLogger?: EventLogger,
+     perProofTimeoutMillis: number = 15000
+ ): Promise<GenerationResult> {
+-    const context = buildProofGenerationContext(
++    const context = await buildProofGenerationContext(
+         completionContext,
+         sourceFileEnvironment.fileTheorems,
+         processEnvironment.theoremRanker,
+diff --git "a/src/core/contextTheoremRanker/actualRankers/\321\201osineContextTheoremRanker.ts" b/src/core/contextTheoremRanker/actualRankers/cosineContextTheoremRanker.ts
+similarity index 96%
+rename from "src/core/contextTheoremRanker/actualRankers/\321\201osineContextTheoremRanker.ts"
+rename to src/core/contextTheoremRanker/actualRankers/cosineContextTheoremRanker.ts
+index cd72114..8277d08 100644
+--- "a/src/core/contextTheoremRanker/actualRankers/\321\201osineContextTheoremRanker.ts"
++++ b/src/core/contextTheoremRanker/actualRankers/cosineContextTheoremRanker.ts
+@@ -14,10 +14,10 @@ export class CosineContextTheoremsRanker implements ContextTheoremsRanker {
+     readonly type = "cosine";
+     readonly needsUnwrappedNotations = true;
+ 
+-    rankContextTheorems(
++    async rankContextTheorems(
+         theorems: Theorem[],
+         completionContext: CompletionContext
+-    ): Theorem[] {
++    ): Promise<Theorem[]> {
+         const goal = completionContext.proofGoal;
+         const goalTheorem = goalAsTheoremString(goal);
+ 
+diff --git a/src/core/contextTheoremRanker/actualRankers/distanceContextTheoremsRanker.ts b/src/core/contextTheoremRanker/actualRankers/distanceContextTheoremsRanker.ts
+index 0de718c..63fc037 100644
+--- a/src/core/contextTheoremRanker/actualRankers/distanceContextTheoremsRanker.ts
++++ b/src/core/contextTheoremRanker/actualRankers/distanceContextTheoremsRanker.ts
+@@ -6,10 +6,10 @@ export class DistanceContextTheoremsRanker implements ContextTheoremsRanker {
+     readonly type = "distance";
+     readonly needsUnwrappedNotations = false;
+ 
+-    rankContextTheorems(
++    async rankContextTheorems(
+         theorems: Theorem[],
+         completionContext: CompletionContext
+-    ): Theorem[] {
++    ): Promise<Theorem[]> {
+         const theoremsBeforeCompletionPosition = theorems.filter(
+             (theorem) =>
+                 theorem.statement_range.start.line <
+diff --git a/src/core/contextTheoremRanker/actualRankers/euclidContextTheoremRanker.ts b/src/core/contextTheoremRanker/actualRankers/euclidContextTheoremRanker.ts
+index 144d751..0896859 100644
+--- a/src/core/contextTheoremRanker/actualRankers/euclidContextTheoremRanker.ts
++++ b/src/core/contextTheoremRanker/actualRankers/euclidContextTheoremRanker.ts
+@@ -13,10 +13,10 @@ export class EuclidContextTheoremsRanker implements ContextTheoremsRanker {
+     readonly type = "euclid";
+     readonly needsUnwrappedNotations = true;
+ 
+-    rankContextTheorems(
++    async rankContextTheorems(
+         theorems: Theorem[],
+         completionContext: CompletionContext
+-    ): Theorem[] {
++    ): Promise<Theorem[]> {
+         const goal = completionContext.proofGoal;
+         const goalTheorem = goalAsTheoremString(goal);
+ 
+diff --git a/src/core/contextTheoremRanker/actualRankers/jaccardIndexContextTheoremsRanker.ts b/src/core/contextTheoremRanker/actualRankers/jaccardIndexContextTheoremsRanker.ts
+index ba49a59..42a7727 100644
+--- a/src/core/contextTheoremRanker/actualRankers/jaccardIndexContextTheoremsRanker.ts
++++ b/src/core/contextTheoremRanker/actualRankers/jaccardIndexContextTheoremsRanker.ts
+@@ -16,10 +16,10 @@ export class JaccardIndexContextTheoremsRanker
+     readonly type = "jaccardIndex";
+     readonly needsUnwrappedNotations = true;
+ 
+-    rankContextTheorems(
++    async rankContextTheorems(
+         theorems: Theorem[],
+         completionContext: CompletionContext
+-    ): Theorem[] {
++    ): Promise<Theorem[]> {
+         const goal = completionContext.proofGoal;
+         const goalTheorem = goalAsTheoremString(goal);
+ 
+diff --git a/src/core/contextTheoremRanker/actualRankers/randomContextTheoremsRanker.ts b/src/core/contextTheoremRanker/actualRankers/randomContextTheoremsRanker.ts
+index c82bced..df00d53 100644
+--- a/src/core/contextTheoremRanker/actualRankers/randomContextTheoremsRanker.ts
++++ b/src/core/contextTheoremRanker/actualRankers/randomContextTheoremsRanker.ts
+@@ -13,10 +13,10 @@ export class RandomContextTheoremsRanker implements ContextTheoremsRanker {
+         }
+     }
+ 
+-    rankContextTheorems(
++    async rankContextTheorems(
+         theorems: Theorem[],
+         _completionContext: CompletionContext
+-    ): Theorem[] {
++    ): Promise<Theorem[]> {
+         const shuffledTheorems = theorems.slice();
+         this.shuffleArray(shuffledTheorems);
+         return shuffledTheorems;
+diff --git a/src/core/contextTheoremRanker/actualRankers/rocqStarContextTheoremRanker.ts b/src/core/contextTheoremRanker/actualRankers/rocqStarContextTheoremRanker.ts
+new file mode 100644
+index 0000000..94c894b
+--- /dev/null
++++ b/src/core/contextTheoremRanker/actualRankers/rocqStarContextTheoremRanker.ts
+@@ -0,0 +1,94 @@
++import axios, { AxiosResponse } from "axios";
++
++import { Theorem } from "../../../coqParser/parsedTypes";
++import { CompletionContext } from "../../completionGenerationContext";
++import { ContextTheoremsRanker } from "../contextTheoremsRanker";
++import { ProofGoal } from "../../../coqLsp/coqLspTypes";
++import { hypToString } from "../../exposedCompletionGeneratorUtils";
++
++interface RankRequest {
++    statement1: string;
++    statement2: string;
++}
++
++interface RankResponse {
++    distance: number;
++}
++
++export class RocqStarContextTheoremsRanker implements ContextTheoremsRanker {
++    readonly type = "rocqStar";
++    readonly needsUnwrappedNotations = true;
++    static readonly host = "localhost";
++    static readonly port = 8000;
++
++    private goalAsRocqStarTheoremString(proofGoal: ProofGoal): string {
++        const auxTheoremConcl = proofGoal?.ty;
++        const theoremIndeces = proofGoal?.hyps
++            .map((hyp) => `(${hypToString(hyp)})`)
++            .join(" ");
++        return `${theoremIndeces} : ${auxTheoremConcl}.`;
++    }
++
++    async rankContextTheorems(
++        theorems: Theorem[],
++        completionContext: CompletionContext
++    ): Promise<Theorem[]> {
++        const goal = completionContext.proofGoal;
++        const anchorStatement = this.goalAsRocqStarTheoremString(goal);
++        const candidates = theorems.map((th) => {
++            if (th.initial_goal === null) {
++                throw new Error(
++                    `RocqStar ranker: theorem ${th.name} has no initial goal`
++                );
++            }
++
++            return this.goalAsRocqStarTheoremString(th.initial_goal);
++        });
++
++        let distances: number[] = Array(candidates.length).fill(Infinity);
++        try {
++            for (const [i, candidate] of candidates.entries()) {
++                const payload: RankRequest = {
++                    statement1: anchorStatement,
++                    statement2: candidate,
++                };
++
++                let resp: AxiosResponse<RankResponse, any>;
++                try {
++                    resp = await axios.post<RankResponse>(
++                        `http://${RocqStarContextTheoremsRanker.host}:${RocqStarContextTheoremsRanker.port}/distance`,
++                        payload,
++                        /* eslint-disable @typescript-eslint/naming-convention */
++                        { headers: { "Content-Type": "application/json" } }
++                    );
++                } catch (err: unknown) {
++                    console.error(
++                        `RocqStar ranker: error while calling RocqStar API`,
++                        err
++                    );
++                    return theorems;
++                }
++        
++                const distance = resp.data.distance;
++                if (typeof distance !== "number") {
++                    console.warn(
++                        `RocqStar Ranker: expected a number, got ${distance}`
++                    );
++                    return theorems;
++                }
++                distances[i] = distance;
++            }
++
++            const zipped = theorems.map((th, i) => ({ th, d: distances[i] }));
++            const sorted = zipped.sort((a, b) => a.d - b.d);
++
++            return sorted.map((x) => x.th);
++        } catch (err: any) {
++            console.error(
++                "RocqStar ranker error",
++                err?.response?.data || err.message
++            );
++            return theorems;
++        }
++    }
++}
+\ No newline at end of file
+diff --git a/src/core/contextTheoremRanker/actualRankers/weightedJaccardIndexTheoremRanker.ts b/src/core/contextTheoremRanker/actualRankers/weightedJaccardIndexTheoremRanker.ts
+index fbf3f52..4715597 100644
+--- a/src/core/contextTheoremRanker/actualRankers/weightedJaccardIndexTheoremRanker.ts
++++ b/src/core/contextTheoremRanker/actualRankers/weightedJaccardIndexTheoremRanker.ts
+@@ -16,10 +16,10 @@ export class WeightedJaccardIndexContextTheoremsRanker
+     readonly type = "weightedJaccardIndex";
+     readonly needsUnwrappedNotations = true;
+ 
+-    rankContextTheorems(
++    async rankContextTheorems(
+         theorems: Theorem[],
+         completionContext: CompletionContext
+-    ): Theorem[] {
++    ): Promise<Theorem[]> {
+         const goal = completionContext.proofGoal;
+         const goalTheorem = goalAsTheoremString(goal);
+ 
+diff --git a/src/core/contextTheoremRanker/contextTheoremsRanker.ts b/src/core/contextTheoremRanker/contextTheoremsRanker.ts
+index 62a07c8..3e83eec 100644
+--- a/src/core/contextTheoremRanker/contextTheoremsRanker.ts
++++ b/src/core/contextTheoremRanker/contextTheoremsRanker.ts
+@@ -5,7 +5,7 @@ export interface ContextTheoremsRanker {
+     rankContextTheorems(
+         theorems: Theorem[],
+         completionContext: CompletionContext
+-    ): Theorem[];
++    ): Promise<Theorem[]>;
+ 
+     readonly type: RankerType;
+ 
+@@ -22,4 +22,5 @@ export type RankerType =
+     | "jaccardIndex"
+     | "random"
+     | "weightedJaccardIndex"
+-    | "cosine";
++    | "cosine"
++    | "rocqStar";
+diff --git a/src/core/exposedCompletionGeneratorUtils.ts b/src/core/exposedCompletionGeneratorUtils.ts
+index 285cbd1..84f6834 100644
+--- a/src/core/exposedCompletionGeneratorUtils.ts
++++ b/src/core/exposedCompletionGeneratorUtils.ts
+@@ -35,16 +35,19 @@ export function goalToTargetLemma(proofGoal: ProofGoal): string {
+     return `Lemma helper_theorem ${theoremIndeces} :\n   ${auxTheoremConcl}.`;
+ }
+ 
+-export function buildProofGenerationContext(
++export async function buildProofGenerationContext(
+     completionContext: CompletionContext,
+     fileTheorems: Theorem[],
+     theoremRanker?: ContextTheoremsRanker,
+     premisesNumber?: number
+-): ProofGenerationContext {
++): Promise<ProofGenerationContext> {
+     const rankedTheorems =
+-        theoremRanker
+-            ?.rankContextTheorems(fileTheorems, completionContext)
+-            .slice(0, premisesNumber) ?? fileTheorems;
++        (
++            await theoremRanker?.rankContextTheorems(
++                fileTheorems,
++                completionContext
++            )
++        )?.slice(0, premisesNumber) ?? fileTheorems;
+     return {
+         contextTheorems: rankedTheorems,
+         completionTarget: goalToTargetLemma(completionContext.proofGoal),
+diff --git a/src/extension/settings/configReaders.ts b/src/extension/settings/configReaders.ts
+index d19fbf8..951b0e1 100644
+--- a/src/extension/settings/configReaders.ts
++++ b/src/extension/settings/configReaders.ts
+@@ -37,6 +37,7 @@ import {
+     SettingsValidationError,
+     toSettingName,
+ } from "./settingsValidationError";
++import { RocqStarContextTheoremsRanker } from "../../core/contextTheoremRanker/actualRankers/rocqStarContextTheoremRanker";
+ 
+ export function parseCoqLspServerPath(): string {
+     const workspaceConfig = workspace.getConfiguration(pluginId);
+@@ -57,6 +58,8 @@ export function buildTheoremsRankerFromConfig(): ContextTheoremsRanker {
+             return new RandomContextTheoremsRanker();
+         case "jaccardIndex":
+             return new JaccardIndexContextTheoremsRanker();
++        case "rocqStar":
++            return new RocqStarContextTheoremsRanker();
+         default:
+             throw new SettingsValidationError(
+                 `unknown context theorems ranker type: ${rankerType}`,
+diff --git a/src/test/commonTestFunctions/prepareEnvironment.ts b/src/test/commonTestFunctions/prepareEnvironment.ts
+index 1f9404b..ed615f3 100644
+--- a/src/test/commonTestFunctions/prepareEnvironment.ts
++++ b/src/test/commonTestFunctions/prepareEnvironment.ts
+@@ -74,11 +74,11 @@ export async function withPreparedEnvironmentAndItsFirstContext<T>(
+     return withPreparedEnvironment(
+         resourcePath,
+         projectRootPath,
+-        (environment) =>
++        async (environment) =>
+             block(
+                 environment,
+                 environment.completionContexts[0],
+-                buildProofGenerationContext(
++                await buildProofGenerationContext(
+                     environment.completionContexts[0],
+                     environment.sourceFileEnvironment.fileTheorems
+                 )
