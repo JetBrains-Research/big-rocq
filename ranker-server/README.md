@@ -2,6 +2,8 @@
 
 This is a small `python` server, that loads a pre-trained model into memory and runs the server to answer queries about the distance between two Rocq statements. This server could be used to test the performance of the model. 
 
+First, you should publish the model to the Hugging Face Hub. Due to double-blind review we do not publish the model ourselves, but leave a link to [Zenodo](https://zenodo.org/records/15428393). You can download the model from there and upload it to your Hugging Face Hub account, then plug in the model link in `config.py` file. 
+
 The model is 500Mb in size and performs well on the CPU of my MacBook Pro (M1), taking roughly 150 ms to answer a query.
 
 If you want to use the model as a ranker inside CoqPilot plugin or inside CoqPilot benchmark, you need to build CoqPilot from sources with the applied patch, which is located in the [CoqPilot+RocqStar](../CoqPilot+RocqStar/) directory of this repository.

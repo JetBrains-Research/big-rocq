@@ -22,7 +22,7 @@ threshold_neg: 0.65
 # With some probability (30%), we sample a hard negative
 # and treat it as a negative. It is done to smoothen the
 # decision boundary and make the model more robust
-threshold_hard_neg: 0.65
+threshold_hard_neg: 0.45
 # In InfoNCE loss, one query is 1 positive and k negatives
 # We maximize the similarity of the query with the
 # positive and minimize it with the negatives
