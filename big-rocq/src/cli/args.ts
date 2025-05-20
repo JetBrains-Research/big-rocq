@@ -93,8 +93,7 @@ export const args = parse<BigRocqCliArguments>(
         ],
         footerContentSections: [
             {
-                content:
-                    "Project is under development",
+                content: "Project is under development",
             },
             {
                 header: "========================================",
