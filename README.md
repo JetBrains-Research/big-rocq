@@ -1,5 +1,5 @@
 # RocqStar Proof Retrieval
-All subfolders contain their own README files with more detailed instructions.
+All submodules contain their own README files with more detailed instructions.
 
 ## Components
 
