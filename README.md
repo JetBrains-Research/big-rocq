@@ -14,6 +14,7 @@
 - 🎯 [Usage guide](#usage-guide)
 - 🖥️ [Example Results](#example-results)
 - 🚧 [Future plans](#future-plans)
+- [Agentic System](#agentic-system)
 
 ## Requirements
 
@@ -131,3 +132,7 @@ Running `BigRocq` on the [IMM](https://github.com/weakmemory/imm) project succed
 
 - We can try augmenting the dataset by adding zero progress tactics or doing some equivalent rewrites 
 - Currently, best case produces linear growth in the number of theorems, in terms of the `Rocq` sentences used in proofs. We plan on achieving exponential growth by using more complex transformations and more advanced domain knowledge.
+
+## Agentic System
+
+The agentic systems consits of two parts: ![MCP server](rocq-mcp-server/) and ![Agent](coqpilot-agent/). You can find more information about each of these components in the README files in the respective directories.
